@@ -12,7 +12,7 @@ A beautifier for Luau written in C++
 > $ luau-beautifier filepath
 > ```
 
-If there are errors parsing, you will see those in stdout.<br>
+If there are errors parsing, you will see those in stderr.<br>
 Otherwise, the beautified code will appear in stdout.
 
 ## Other notes
