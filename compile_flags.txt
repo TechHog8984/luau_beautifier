@@ -1,0 +1,6 @@
+-Ibeautify
+-ILuau/Analysis/include
+-ILuau/Ast/include
+-ILuau/CLI
+-ILuau/Common/include
+-ILuau/Config/include
