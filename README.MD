@@ -2,6 +2,9 @@
 
 A beautifier for Luau written in C++
 
+## Replit
+You can use luau_beautifier without compiling with [this replit](https://replit.com/@TechHog/luaubeautifier-site).
+
 ## Build
 > ```sh
 > $ make
