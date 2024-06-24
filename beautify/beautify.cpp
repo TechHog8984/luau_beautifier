@@ -302,7 +302,7 @@ std::string beautify(AstNode* node) {
             }
 
             optionalNewline;
-            result.append("end");
+            result.append("end;");
         } else if (AstStatWhile* stat_while = stat->as<AstStatWhile>()) {
             addIndents;
             result.append("while ");
@@ -314,7 +314,7 @@ std::string beautify(AstNode* node) {
             indent--;
 
             optionalNewline;
-            result.append("end");
+            result.append("end;");
         } else if (AstStatRepeat* stat_repeat = stat->as<AstStatRepeat>()) {
             addIndents;
             result.append("repeat\n");
@@ -326,12 +326,13 @@ std::string beautify(AstNode* node) {
             optionalNewline;
             result.append("until ");
             result.append(beautify(stat_repeat->condition));
+            result.append(";");
         } else if (AstStatBreak* stat_break = stat->as<AstStatBreak>()) {
             addIndents;
-            result.append("break");
+            result.append("break;");
         } else if (AstStatContinue* stat_break = stat->as<AstStatContinue>()) {
             addIndents;
-            result.append("continue");
+            result.append("continue;");
         } else if (AstStatReturn* stat_return = stat->as<AstStatReturn>()) {
             addIndents;
             result.append("return");
@@ -340,9 +341,11 @@ std::string beautify(AstNode* node) {
                 result.append(" ");
 
             astlist(stat_return->list, AstExpr);
+            result.append(";");
         } else if (AstStatExpr* stat_expr = stat->as<AstStatExpr>()) {
             addIndents;
             result.append(beautify(stat_expr->expr));
+            result.append(";");
         } else if (AstStatLocal* stat_local = stat->as<AstStatLocal>()) {
             addIndents;
             result.append("local ");
@@ -351,6 +354,7 @@ std::string beautify(AstNode* node) {
                 result.append(" = ");
                 astlist2(stat_local->values, AstExpr);
             };
+            result.append(";");
         } else if (AstStatFor* stat_for = stat->as<AstStatFor>()) {
             addIndents;
             result.append("for ");
@@ -371,7 +375,7 @@ std::string beautify(AstNode* node) {
             indent--;
 
             optionalNewline;
-            result.append("end");
+            result.append("end;");
         } else if (AstStatForIn* stat_for_in = stat->as<AstStatForIn>()) {
             addIndents;
             result.append("for ");
@@ -385,7 +389,7 @@ std::string beautify(AstNode* node) {
             indent--;
 
             optionalNewline;
-            result.append("end");
+            result.append("end;");
         } else if (AstStatAssign* stat_assign = stat->as<AstStatAssign>()) {
             addIndents;
             astlist(stat_assign->vars, AstExpr);
@@ -393,6 +397,7 @@ std::string beautify(AstNode* node) {
                 result.append(" = ");
                 astlist2(stat_assign->values, AstExpr);
             };
+            result.append(";");
         } else if (AstStatCompoundAssign* stat_compound_assign = stat->as<AstStatCompoundAssign>()) {
             addIndents;
             result.append(beautify(stat_compound_assign->var));
@@ -400,17 +405,20 @@ std::string beautify(AstNode* node) {
             result.append(binary_operators[stat_compound_assign->op]);
             result.append("= ");
             result.append(beautify(stat_compound_assign->value));
+            result.append(";");
         } else if (AstStatFunction* stat_function = stat->as<AstStatFunction>()) {
             addIndents;
             result.append(beautify(stat_function->name));
             result.append(" = ");
             result.append(beautify(stat_function->func));
+            result.append(";");
         } else if (AstStatLocalFunction* stat_local_function = stat->as<AstStatLocalFunction>()) {
             addIndents;
             result.append("local ");
             result.append(beautify(stat_local_function->name));
             result.append(" = ");
             result.append(beautify(stat_local_function->func));
+            result.append(";");
         } else {
             result.append("--[[ error: unknown stat type! ]]");
         };
