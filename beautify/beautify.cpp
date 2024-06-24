@@ -117,7 +117,7 @@ std::string fixString(AstArray<char> value) {
     return result;
 };
 
-std::string fixNumber(double value) {
+std::string convertNumber(double value) {
     double decimal, integer;
 
     decimal = modf(value, &integer);
@@ -133,11 +133,15 @@ std::string fixNumber(double value) {
         result = str;
     };
 
-    while (result.length() > 2 && result[result.length() - 1] == '0')
-        result.erase(result.length() - 1, 1);
+    if (result == "inf") {
+        result = "math.huge";
+    } else {
+        while (result.length() > 2 && result[result.length() - 1] == '0')
+            result.erase(result.length() - 1, 1);
 
-    if (result[result.length() - 1] == '.')
-        result.erase(result.length() - 1, 1);
+        if (result[result.length() - 1] == '.')
+            result.erase(result.length() - 1, 1);
+    };
 
     return result;
 };
@@ -228,7 +232,7 @@ std::string beautify(AstNode* node) {
         if (AstExprGroup* expr_group = expr->as<AstExprGroup>()) {
             result = '(';
             if (isSolvable(expr_group)) {
-                result.append(fixNumber(solve(expr_group)));
+                result.append(convertNumber(solve(expr_group)));
             } else {
                 result.append(beautify(expr_group->expr));
             };
@@ -238,7 +242,7 @@ std::string beautify(AstNode* node) {
         } else if (AstExprConstantBool* expr_bool = expr->as<AstExprConstantBool>()) {
             result = expr_bool->value ? "true" : "false";
         } else if (AstExprConstantNumber* expr_number = expr->as<AstExprConstantNumber>()) {
-            result = fixNumber(expr_number->value);
+            result = convertNumber(expr_number->value);
         } else if (AstExprConstantString* expr_string = expr->as<AstExprConstantString>()) {
             result = fixString(expr_string->value);
         } else if (AstExprLocal* expr_local = expr->as<AstExprLocal>()) {
@@ -318,14 +322,14 @@ std::string beautify(AstNode* node) {
             };
         } else if (AstExprUnary* expr_unary = expr->as<AstExprUnary>()) {
             if (isSolvable(expr_unary)) {
-                result.append(fixNumber(solve(expr_unary)));
+                result.append(convertNumber(solve(expr_unary)));
             } else {
                 result.append(unary_operators[expr_unary->op]);
                 result.append(beautify(expr_unary->expr));
             }
         } else if (AstExprBinary* expr_binary = expr->as<AstExprBinary>()) {
             if (isSolvable(expr_binary)) {
-                result.append(fixNumber(solve(expr_binary)));
+                result.append(convertNumber(solve(expr_binary)));
             } else {
                 result.append(beautify(expr_binary->left));
                 result.append(" ");
