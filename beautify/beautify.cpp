@@ -386,6 +386,13 @@ std::string beautify(AstNode* node) {
 
             optionalNewline;
             result.append("end");
+        } else if (AstStatAssign* stat_assign = stat->as<AstStatAssign>()) {
+            addIndents;
+            astlist(stat_assign->vars, AstExpr);
+            if (stat_assign->values.size > 0) {
+                result.append(" = ");
+                astlist2(stat_assign->values, AstExpr);
+            };
         } else if (AstStatCompoundAssign* stat_compound_assign = stat->as<AstStatCompoundAssign>()) {
             addIndents;
             result.append(beautify(stat_compound_assign->var));
