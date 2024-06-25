@@ -1,5 +1,4 @@
 #include <string>
-#include <utility>
 
 #include "Luau/Ast.h"
 
