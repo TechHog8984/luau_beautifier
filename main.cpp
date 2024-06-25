@@ -23,8 +23,8 @@ int displayHelp(char* path) {
     return 0;
 };
 
-int parseArgs(int* argc, char** argv, char** path, char** unrecognized_option, bool* minify, bool* nosolve) {
-    *path = argv[0];
+int parseArgs(int* argc, char** argv, char** filepath, bool* minify, bool* nosolve) {
+    bool found_file = false;
 
     for (int i = 1; i < *argc; i++) {
         if (strncmp("--", argv[i], 2) == 0) {
@@ -34,9 +34,17 @@ int parseArgs(int* argc, char** argv, char** path, char** unrecognized_option, b
             else if (strcmp(argv[i], "nosolve") == 0)
                 *nosolve = true;
             else {
-                *unrecognized_option = (char*) argv[i] - 2;
+                fprintf(stderr, "Error: unrecognized option '%s'\n\n", (char*) argv[i] - 2);
                 return 1;
             };
+        } else {
+            if (found_file) {
+                fprintf(stderr, "Error: multiple files are not supported\n\n");
+                return 1;
+            };
+
+            found_file = true;
+            *filepath = argv[i];
         };
     };
 
@@ -50,21 +58,19 @@ int main(int argc, char** argv) {
     if (argc == 1)
         return displayHelp(argv[0]);
 
-    char* path;
-    char* unrecognized_option;
+    char* filepath;
 
     bool minify;
     bool nosolve;
 
-    if (parseArgs(&argc, argv, &path, &unrecognized_option, &minify, &nosolve)) {
-        fprintf(stderr, "Error: unrecognized option '%s'\n\n", unrecognized_option);
-        return displayHelp(path);
+    if (parseArgs(&argc, argv, &filepath, &minify, &nosolve)) {
+        return displayHelp(argv[0]);
     };
 
-    std::optional<std::string> source = readFile(argv[1]);
+    std::optional<std::string> source = readFile(filepath);
 
     if (!source) {
-        fprintf(stderr, "failed to read file %s\n", argv[1]);
+        fprintf(stderr, "failed to read file %s\n", filepath);
         return 1;
     };
 
