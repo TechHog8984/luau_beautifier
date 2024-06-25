@@ -46,4 +46,6 @@ int main(int argc, char** argv) {
     Luau::AstStatBlock* root = parse_result.root;
 
     printf("%s", beautify(root).c_str());
+
+    return 0;
 }
