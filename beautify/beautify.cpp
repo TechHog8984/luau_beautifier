@@ -133,6 +133,8 @@ std::string beautify(AstLocal* local) {
 
 int indent = 0;
 bool skip_first_indent = false;
+bool b_is_root = true; // aka is first beautify call
+bool b_dont_append_do = false;
 
 std::string beautify(AstNode* node) {
     std::string result = "";
@@ -274,10 +276,28 @@ std::string beautify(AstNode* node) {
         };
     } else if (AstStat* stat = node->asStat()) {
         if (AstStatBlock* stat2 = stat->as<AstStatBlock>()) {
-            // addIndents;
+            bool append_do = stat2->hasEnd && !b_dont_append_do;
+            if (b_is_root) {
+                append_do = false;
+                b_is_root = false;
+            };
+
+            if (append_do) {
+                addIndents;
+                result.append("do\n");
+                indent++;
+            };
+            b_dont_append_do = false;
+
             for (AstStat* child : stat2->body) {
                 result.append(beautify(child));
                 result.append("\n");
+            };
+
+            if (append_do) {
+                indent--;
+                optionalNewline;
+                result.append("end;");
             };
         } else if (AstStatIf* stat_if = stat->as<AstStatIf>()) {
             addIndents;
@@ -286,6 +306,7 @@ std::string beautify(AstNode* node) {
             result.append(" then\n");
 
             indent++;
+            b_dont_append_do = true;
             result.append(beautify(stat_if->thenbody));
             indent--;
 
@@ -306,6 +327,7 @@ std::string beautify(AstNode* node) {
             result.append(" do\n");
 
             indent++;
+            b_dont_append_do = true;
             result.append(beautify(stat_while->body));
             indent--;
 
@@ -316,6 +338,7 @@ std::string beautify(AstNode* node) {
             result.append("repeat\n");
 
             indent++;
+            b_dont_append_do = true;
             result.append(beautify(stat_repeat->body));
             indent--;
 
@@ -367,6 +390,7 @@ std::string beautify(AstNode* node) {
             result.append(" do\n");
 
             indent++;
+            b_dont_append_do = true;
             result.append(beautify(stat_for->body));
             indent--;
 
@@ -381,6 +405,7 @@ std::string beautify(AstNode* node) {
             result.append(" do\n");
 
             indent++;
+            b_dont_append_do = true;
             result.append(beautify(stat_for_in->body));
             indent--;
 

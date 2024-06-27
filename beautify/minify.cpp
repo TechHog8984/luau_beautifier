@@ -7,17 +7,20 @@
 #define convert minify
 
 #define optionalSpace \
-if (isSpace(result[result.length() - 1])) \
+if (!isSpace(result[result.length() - 1]) && result[result.length() - 1] != ';') \
     result.append(" ")
 
 std::string minify(AstLocal* local) {
     return local->name.value;
 };
 
+bool m_is_root = true; // aka is first minify call
+bool m_dont_append_do = false;
+
 std::string minify(Luau::AstNode* node) {
     std::string result = "";
 
-        if (AstExpr* expr = node->asExpr()) {
+    if (AstExpr* expr = node->asExpr()) {
         if (AstExprGroup* expr_group = expr->as<AstExprGroup>()) {
             result = '(';
             if (isSolvable(expr_group)) {
@@ -145,8 +148,24 @@ std::string minify(Luau::AstNode* node) {
         };
     } else if (AstStat* stat = node->asStat()) {
         if (AstStatBlock* stat2 = stat->as<AstStatBlock>()) {
+            bool append_do = stat2->hasEnd && !m_dont_append_do;
+            if (m_is_root) {
+                append_do = false;
+                m_is_root = false;
+            };
+
+            if (append_do)
+                result.append("do ");
+
+            m_dont_append_do = false;
+
             for (AstStat* child : stat2->body) {
                 result.append(minify(child));
+            };
+
+            if (append_do) {
+                optionalSpace;
+                result.append("end;");
             };
         } else if (AstStatIf* stat_if = stat->as<AstStatIf>()) {
             result.append("if ");
