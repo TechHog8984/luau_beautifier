@@ -81,6 +81,13 @@ std::string fixString(AstArray<char> value) {
 
                 default:
                     result.append("\\");
+
+                    unsigned char n = (unsigned char) ch;
+                    if (n < 10)
+                        result.append("00");
+                    else if (n < 100)
+                        result.append("0");
+
                     result.append(std::to_string((unsigned char)ch));
             };
         };
