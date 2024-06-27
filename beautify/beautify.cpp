@@ -186,6 +186,7 @@ std::string beautify(AstNode* node) {
             result.append("\n");
 
             indent++;
+            b_dont_append_do = true;
             result.append(beautify(expr_function->body));
             indent--;
 

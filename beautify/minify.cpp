@@ -65,6 +65,7 @@ std::string minify(Luau::AstNode* node) {
                 result.append("...)");
             };
 
+            m_dont_append_do = true;
             result.append(minify(expr_function->body));
 
             optionalSpace;
