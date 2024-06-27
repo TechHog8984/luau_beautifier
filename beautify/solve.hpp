@@ -6,26 +6,26 @@ using namespace Luau;
 
 struct Solved {
     enum Type {
-        Math,
-        Comparison,
-        String
+        Number,
+        Bool,
+        Expression
     } type;
-    double math_result;
-    bool comparison_result;
-    AstExpr* string_result;
+    double number_result;
+    bool bool_result;
+    AstExpr* expression_result;
 };
 
 #define appendSolve(expr, format) \
 Solved solved = solve(expr); \
 switch (solved.type) { \
-    case Solved::Type::Math: \
-        result.append(convertNumber(solved.math_result)); \
+    case Solved::Type::Number: \
+        result.append(convertNumber(solved.number_result)); \
         break; \
-    case Solved::Type::Comparison: \
-        result.append(solved.comparison_result ? "true" : "false"); \
+    case Solved::Type::Bool: \
+        result.append(solved.bool_result ? "true" : "false"); \
         break; \
-    case Solved::Type::String: \
-        result.append(format(solved.string_result)); \
+    case Solved::Type::Expression: \
+        result.append(format(solved.expression_result)); \
 }
 
 bool isSolvable(AstExpr* expr);

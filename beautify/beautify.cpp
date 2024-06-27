@@ -207,7 +207,7 @@ std::string beautify(AstNode* node) {
             };
         } else if (AstExprUnary* expr_unary = expr->as<AstExprUnary>()) {
             if (isSolvable(expr_unary)) {
-                result.append(convertNumber(solve(expr_unary).math_result));
+                appendSolve(expr, beautify);
             } else {
                 result.append(unary_operators[expr_unary->op]);
                 result.append(beautify(expr_unary->expr));

@@ -1,4 +1,6 @@
+#include <cassert>
 #include <cmath>
+#include <cstring>
 #include "solve.hpp"
 
 #include "Luau/Ast.h"
@@ -7,190 +9,249 @@ using namespace Luau;
 
 bool nosolve;
 
-bool isExpressionString(AstExpr* expr) {
-    if (AstExprConstantString* expr_const = expr->as<AstExprConstantString>()) {
+AstExpr* getRootExpr(AstExpr* expr) {
+    AstExprGroup* expr_group;
+    while ((expr_group = expr->as<AstExprGroup>()))
+        expr = expr_group->expr;
+
+    return expr;
+};
+
+enum SolveResultType {
+    None,
+    Bool,
+    Number,
+    String,
+};
+
+bool isConstant(AstExpr* expr);
+bool isConstantNumber(AstExpr* expr);
+bool isConstantString(AstExpr* expr);
+
+SolveResultType getSolveResultType(AstExpr* expr) {
+    SolveResultType result = None;
+    if (AstExprUnary* expr_unary = expr->as<AstExprUnary>()) {
+        switch (expr_unary->op) {
+            case AstExprUnary::Op::Not:
+                if (isConstant(expr_unary->expr))
+                    result = Bool;
+                break;
+            case AstExprUnary::Op::Minus:
+                if (isConstantNumber(expr_unary->expr))
+                    result = Number;
+                break;
+
+            default:
+                break;
+        };
+    } else if (AstExprBinary* expr_binary = expr->as<AstExprBinary>()) {
+        // TODO: number concat
+        if (expr_binary->op != AstExprBinary::Op::Concat && isConstantNumber(expr_binary->left) && isConstantNumber(expr_binary->right))
+            result = Number;
+        else if (isConstantString(expr_binary->left) && isConstantString(expr_binary->right)) {
+            switch (expr_binary->op) {
+                case AstExprBinary::Op::CompareNe:
+                case AstExprBinary::Op::CompareEq:
+                case AstExprBinary::Op::CompareLt:
+                case AstExprBinary::Op::CompareLe:
+                case AstExprBinary::Op::CompareGt:
+                case AstExprBinary::Op::CompareGe:
+                    result = Bool;
+                    break;
+
+                case AstExprBinary::Op::And:
+                case AstExprBinary::Op::Or:
+                    result = String;
+                    break;
+
+                default:
+                    break;
+            };
+        };
+    } else if (getRootExpr(expr)->is<AstExprConstantNumber>()) {
+        result = Number;
+    };
+
+    return result;
+};
+
+bool isConstant(AstExpr* expr) {
+    if (isSolvable(expr))
         return true;
-    } else if (AstExprGroup* expr_group = expr->as<AstExprGroup>()) {
-        return isExpressionString(expr_group->expr);
+
+    expr = getRootExpr(expr);
+
+    if (expr->is<AstExprConstantNil>() || expr->is<AstExprConstantBool>() || expr->is<AstExprConstantNumber>() || expr->is<AstExprConstantString>()) {
+        return true;
     };
 
     return false;
+};
+bool isConstantNumber(AstExpr* expr) {
+    expr = getRootExpr(expr);
+
+    return expr->is<AstExprConstantNumber>() || getSolveResultType(expr) == Number;
+};
+bool isConstantString(AstExpr* expr) {
+    expr = getRootExpr(expr);
+
+    return expr->is<AstExprConstantString>() || getSolveResultType(expr) == String;
 };
 
 bool isSolvable(AstExpr* expr) {
-    if (nosolve)
-        return false;
+    return getSolveResultType(expr) != None;
+};
 
-    if (expr->is<AstExprConstantNumber>()) {
-        return true;
-    } else if (AstExprGroup* expr_group = expr->as<AstExprGroup>()) {
-        return isSolvable(expr_group->expr);
-    } else if (AstExprUnary* expr_unary = expr->as<AstExprUnary>()) {
-        return isSolvable(expr_unary->expr);
-    } else if (AstExprBinary* expr_binary = expr->as<AstExprBinary>()) {
-        bool valid_operation;
-        switch (expr_binary->op) {
-            case AstExprBinary::Op::Add:
-            case AstExprBinary::Op::Sub:
-            case AstExprBinary::Op::Mul:
-            case AstExprBinary::Op::Div:
-            case AstExprBinary::Op::FloorDiv:
-            case AstExprBinary::Op::Mod:
-            case AstExprBinary::Op::Pow:
-            case AstExprBinary::Op::CompareNe:
-            case AstExprBinary::Op::CompareEq:
-            case AstExprBinary::Op::CompareLt:
-            case AstExprBinary::Op::CompareLe:
-            case AstExprBinary::Op::CompareGt:
-            case AstExprBinary::Op::CompareGe:
-                valid_operation = true;
-                break;
+bool isFalsey(AstExpr* expr) {
+    if (AstExprConstantBool* expr_bool = expr->as<AstExprConstantBool>())
+        return expr_bool->value == false;
 
-            case AstExprBinary::Op::And:
-            case AstExprBinary::Op::Or:
-                return isExpressionString(expr_binary->left) && isExpressionString(expr_binary->right);
-
-            default:
-                valid_operation = false;
-        };
-
-        return valid_operation && isSolvable(expr_binary->left) && isSolvable(expr_binary->right);
-    };
-
-    return false;
+    return expr->is<AstExprConstantNil>();
 };
 
 Solved solve(AstExpr* expr) {
-    Solved result { .type = Solved::Type::Math, .math_result = 0 };
+    expr = getRootExpr(expr);
+    assert(isSolvable(expr));
 
-    if (!isSolvable(expr))
-        return result;
+    Solved result = {};
 
-    if (AstExprConstantNumber* expr_number = expr->as<AstExprConstantNumber>()) {
-        result.math_result = expr_number->value;
-    } else if (AstExprGroup* expr_group = expr->as<AstExprGroup>()) {
-        result = solve(expr_group->expr);
+    if (AstExprConstantNumber* expr_number = expr->as<AstExprConstantNumber>()){
+        result.type = Solved::Type::Number;
+        result.number_result = expr_number->value;
     } else if (AstExprUnary* expr_unary = expr->as<AstExprUnary>()) {
-        result = solve(expr_unary->expr);
-
         switch (expr_unary->op) {
-            case AstExprUnary::Op::Minus:
-                result.math_result = -result.math_result;
+            case AstExprUnary::Op::Not:
+                if (isConstant(expr_unary->expr))
+                    result.type = Solved::Type::Bool;
+                    result.bool_result = isFalsey(getRootExpr(expr_unary->expr));
                 break;
+            case AstExprUnary::Op::Minus:
+                if (isConstantNumber(expr_unary->expr))
+                    result.type = Solved::Type::Number;
+                    result.number_result = -solve(getRootExpr(expr_unary->expr)).number_result;
+                break;
+
             default:
                 break;
         };
     } else if (AstExprBinary* expr_binary = expr->as<AstExprBinary>()) {
-        Solved left = solve(expr_binary->left);
-        Solved right = solve(expr_binary->right);
+        if (isConstantNumber(expr_binary->left) && isConstantNumber(expr_binary->right)) {
+            Solved left = solve(expr_binary->left);
+            Solved right = solve(expr_binary->right);
 
-        switch (expr_binary->op) {
-            case AstExprBinary::Op::Add:
-                result.math_result = left.math_result + right.math_result;
-                break;
-            case AstExprBinary::Op::Sub:
-                result.math_result = left.math_result - right.math_result;
-                break;
-            case AstExprBinary::Op::Mul:
-                result.math_result = left.math_result * right.math_result;
-                break;
-            case AstExprBinary::Op::Div:
-                result.math_result = left.math_result / right.math_result;
-                break;
-            case AstExprBinary::Op::FloorDiv:
-                // FIXME: this is wrong
-                result.math_result = floor(left.math_result / right.math_result);
-                break;
-            case AstExprBinary::Op::Mod:
-                result.math_result = (int) left.math_result % (int) right.math_result;
-                break;
-            case AstExprBinary::Op::Pow:
-                result.math_result = pow(left.math_result, right.math_result);
-                break;
-            case AstExprBinary::Op::CompareNe:
-                result.type = Solved::Type::Comparison;
-                switch (left.type) {
-                    case Solved::Type::Math:
-                        result.comparison_result = left.math_result != right.math_result;
-                        break;
-                    case Solved::Type::Comparison:
-                        result.comparison_result = left.comparison_result != right.comparison_result;
-                        break;
-                    default: break;
-                };
-                break;
-            case AstExprBinary::Op::CompareEq:
-                result.type = Solved::Type::Comparison;
-                switch (left.type) {
-                    case Solved::Type::Math:
-                        result.comparison_result = left.math_result == right.math_result;
-                        break;
-                    case Solved::Type::Comparison:
-                        result.comparison_result = left.comparison_result == right.comparison_result;
-                        break;
-                    default: break;
-                };
-                break;
-            case AstExprBinary::Op::CompareLt:
-                result.type = Solved::Type::Comparison;
-                switch (left.type) {
-                    case Solved::Type::Math:
-                        result.comparison_result = left.math_result < right.math_result;
-                        break;
-                    case Solved::Type::Comparison:
-                        result.comparison_result = left.comparison_result < right.comparison_result;
-                        break;
-                    default: break;
-                };
-                break;
-            case AstExprBinary::Op::CompareLe:
-                result.type = Solved::Type::Comparison;
-                switch (left.type) {
-                    case Solved::Type::Math:
-                        result.comparison_result = left.math_result <= right.math_result;
-                        break;
-                    case Solved::Type::Comparison:
-                        result.comparison_result = left.comparison_result <= right.comparison_result;
-                        break;
-                    default: break;
-                };
-                break;
-            case AstExprBinary::Op::CompareGt:
-                result.type = Solved::Type::Comparison;
-                switch (left.type) {
-                    case Solved::Type::Math:
-                        result.comparison_result = left.math_result > right.math_result;
-                        break;
-                    case Solved::Type::Comparison:
-                        result.comparison_result = left.comparison_result > right.comparison_result;
-                        break;
-                    default: break;
-                };
-                break;
-            case AstExprBinary::Op::CompareGe:
-                result.type = Solved::Type::Comparison;
-                switch (left.type) {
-                    case Solved::Type::Math:
-                        result.comparison_result = left.math_result >= right.math_result;
-                        break;
-                    case Solved::Type::Comparison:
-                        result.comparison_result = left.comparison_result >= right.comparison_result;
-                        break;
-                    default: break;
-                };
-                break;
+            switch (expr_binary->op) {
+                case AstExprBinary::Op::Add:
+                    result.type = Solved::Type::Number;
+                    result.number_result = left.number_result + right.number_result;
+                    break;
+                case AstExprBinary::Op::Sub:
+                    result.type = Solved::Type::Number;
+                    result.number_result = left.number_result - right.number_result;
+                    break;
+                case AstExprBinary::Op::Mul:
+                    result.type = Solved::Type::Number;
+                    result.number_result = left.number_result * right.number_result;
+                    break;
+                case AstExprBinary::Op::Div:
+                    result.type = Solved::Type::Number;
+                    result.number_result = left.number_result / right.number_result;
+                    break;
+                case AstExprBinary::Op::FloorDiv:
+                    result.type = Solved::Type::Number;
+                    // TODO: double check floordiv implementation
+                    result.number_result = floor(left.number_result / right.number_result);
+                    break;
+                case AstExprBinary::Op::Mod:
+                    result.type = Solved::Type::Number;
+                    result.number_result = (int) left.number_result % (int) right.number_result;
+                    break;
+                case AstExprBinary::Op::Pow:
+                    result.type = Solved::Type::Number;
+                    result.number_result = pow(left.number_result, right.number_result);
+                    break;
+                case AstExprBinary::Op::Concat:
+                    // TODO: number concat
+                    break;
+                case AstExprBinary::Op::CompareNe:
+                    result.type = Solved::Type::Bool;
+                    result.bool_result = left.number_result != right.number_result;
+                    break;
+                case AstExprBinary::Op::CompareEq:
+                    result.type = Solved::Type::Bool;
+                    result.bool_result = left.number_result == right.number_result;
+                    break;
+                case AstExprBinary::Op::CompareLt:
+                    result.type = Solved::Type::Bool;
+                    result.bool_result = left.number_result < right.number_result;
+                    break;
+                case AstExprBinary::Op::CompareLe:
+                    result.type = Solved::Type::Bool;
+                    result.bool_result = left.number_result <= right.number_result;
+                    break;
+                case AstExprBinary::Op::CompareGt:
+                    result.type = Solved::Type::Bool;
+                    result.bool_result = left.number_result > right.number_result;
+                    break;
+                case AstExprBinary::Op::CompareGe:
+                    result.type = Solved::Type::Bool;
+                    result.bool_result = left.number_result >= right.number_result;
+                    break;
+                case AstExprBinary::Op::And:
+                    result.type = Solved::Type::Number;
+                    result.number_result = right.number_result;
+                    break;
+                case AstExprBinary::Op::Or:
+                    result.type = Solved::Type::Number;
+                    result.number_result = left.number_result;
+                    break;
 
-            case AstExprBinary::Op::And:
-                result.type = Solved::Type::String;
-                result.string_result = expr_binary->right;
-                break;
-            case AstExprBinary::Op::Or:
-                result.type = Solved::Type::String;
-                result.string_result = expr_binary->left;
-                break;
+                default:
+                    break;
+            };
+        } else if (isConstantString(expr_binary->left) && isConstantString(expr_binary->right)) {
+            char* left = getRootExpr(expr_binary->left)->as<AstExprConstantString>()->value.data;
+            char* right = getRootExpr(expr_binary->right)->as<AstExprConstantString>()->value.data;
 
-            default:
-                break;
+            int res = strcmp(left, right);
+
+            switch (expr_binary->op) {
+                case AstExprBinary::Op::CompareNe:
+                    result.type = Solved::Type::Bool;
+                    result.bool_result = res != 0;
+                    break;
+                case AstExprBinary::Op::CompareEq:
+                    result.type = Solved::Type::Bool;
+                    result.bool_result = res == 0;
+                    break;
+                case AstExprBinary::Op::CompareLt:
+                    result.type = Solved::Type::Bool;
+                    result.bool_result = res < 0;
+                    break;
+                case AstExprBinary::Op::CompareLe:
+                    result.type = Solved::Type::Bool;
+                    result.bool_result = res <= 0;
+                    break;
+                case AstExprBinary::Op::CompareGt:
+                    result.type = Solved::Type::Bool;
+                    result.bool_result = res > 0;
+                    break;
+                case AstExprBinary::Op::CompareGe:
+                    result.type = Solved::Type::Bool;
+                    result.bool_result = res >= 0;
+                    break;
+
+                case AstExprBinary::Op::And:
+                    result.type = Solved::Type::Expression;
+                    result.expression_result = getRootExpr(expr_binary->right);
+                    break;
+                case AstExprBinary::Op::Or:
+                    result.type = Solved::Type::Expression;
+                    result.expression_result = getRootExpr(expr_binary->left);
+                    break;
+
+                default:
+                    break;
+            };
         };
     };
 
