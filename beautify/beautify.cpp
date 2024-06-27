@@ -42,6 +42,23 @@ optional_newline_index = result.length() - 1; \
 optionalNewlineBody
 
 
+#define beautifyFunction(expr) \
+tuple(expr->args, AstLocal); \
+if (expr->vararg) { \
+    result.erase(result.size() - 1, 1); \
+    if (expr->args.size > 0) \
+        result.append(", "); \
+    result.append("...)"); \
+}; \
+result.append("\n"); \
+indent++; \
+b_dont_append_do = true; \
+result.append(beautify(expr->body)); \
+indent--; \
+optionalNewline; \
+result.append("end")
+
+
 std::string fixString(AstArray<char> value) {
     std::string result = "\"";
 
@@ -98,35 +115,6 @@ std::string fixString(AstArray<char> value) {
     return result;
 };
 
-std::string convertNumber(double value) {
-    double decimal, integer;
-
-    decimal = modf(value, &integer);
-
-    std::string result;
-
-    if (decimal == 0) {
-        result = std::to_string(integer);
-    } else {
-        char str[500];
-        sprintf(str, "%.15f", value);
-
-        result = str;
-    };
-
-    if (result == "inf") {
-        result = "math.huge";
-    } else {
-        while (result.length() > 2 && result[result.length() - 1] == '0')
-            result.erase(result.length() - 1, 1);
-
-        if (result[result.length() - 1] == '.')
-            result.erase(result.length() - 1, 1);
-    };
-
-    return result;
-};
-
 std::string beautify(AstLocal* local) {
     return local->name.value;
 };
@@ -143,7 +131,7 @@ std::string beautify(AstNode* node) {
         if (AstExprGroup* expr_group = expr->as<AstExprGroup>()) {
             result = '(';
             if (isSolvable(expr_group)) {
-                result.append(convertNumber(solve(expr_group)));
+                appendSolve(expr_group);
             } else {
                 result.append(beautify(expr_group->expr));
             };
@@ -176,22 +164,7 @@ std::string beautify(AstNode* node) {
             result.append("]");
         } else if (AstExprFunction* expr_function = expr->as<AstExprFunction>()) {
             result = "function";
-            tuple(expr_function->args, AstLocal);
-            if (expr_function->vararg) {
-                result.erase(result.size() - 1, 1);
-                if (expr_function->args.size > 0)
-                    result.append(", ");
-                result.append("...)");
-            };
-            result.append("\n");
-
-            indent++;
-            b_dont_append_do = true;
-            result.append(beautify(expr_function->body));
-            indent--;
-
-            optionalNewline;
-            result.append("end");
+            beautifyFunction(expr_function);
         } else if (AstExprTable* expr_table = expr->as<AstExprTable>()) {
             size_t size = expr_table->items.size;
             if (size > 0) {
@@ -234,14 +207,14 @@ std::string beautify(AstNode* node) {
             };
         } else if (AstExprUnary* expr_unary = expr->as<AstExprUnary>()) {
             if (isSolvable(expr_unary)) {
-                result.append(convertNumber(solve(expr_unary)));
+                result.append(convertNumber(solve(expr_unary).math_result));
             } else {
                 result.append(unary_operators[expr_unary->op]);
                 result.append(beautify(expr_unary->expr));
             }
         } else if (AstExprBinary* expr_binary = expr->as<AstExprBinary>()) {
             if (isSolvable(expr_binary)) {
-                result.append(convertNumber(solve(expr_binary)));
+                appendSolve(expr_binary);
             } else {
                 result.append(beautify(expr_binary->left));
                 result.append(" ");
@@ -436,11 +409,16 @@ std::string beautify(AstNode* node) {
             result.append(";");
         } else if (AstStatLocalFunction* stat_local_function = stat->as<AstStatLocalFunction>()) {
             addIndents;
-            result.append("local ");
+            // result.append("local ");
+            // result.append(beautify(stat_local_function->name));
+            // result.append(" = ");
+            // result.append(beautify(stat_local_function->func));
+            // result.append(";");
+
+            result.append("local function ");
             result.append(beautify(stat_local_function->name));
-            result.append(" = ");
-            result.append(beautify(stat_local_function->func));
-            result.append(";");
+
+            beautifyFunction(stat_local_function->func);
         } else {
             result.append("--[[ error: unknown stat type! ]]");
         };

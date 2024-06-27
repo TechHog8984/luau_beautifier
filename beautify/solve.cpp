@@ -18,66 +18,185 @@ bool isSolvable(AstExpr* expr) {
     } else if (AstExprUnary* expr_unary = expr->as<AstExprUnary>()) {
         return isSolvable(expr_unary->expr);
     } else if (AstExprBinary* expr_binary = expr->as<AstExprBinary>()) {
-        return isSolvable(expr_binary->left) && isSolvable(expr_binary->right);
+        bool valid_operation;
+        switch (expr_binary->op) {
+            case AstExprBinary::Op::Add:
+            case AstExprBinary::Op::Sub:
+            case AstExprBinary::Op::Mul:
+            case AstExprBinary::Op::Div:
+            case AstExprBinary::Op::FloorDiv:
+            case AstExprBinary::Op::Mod:
+            case AstExprBinary::Op::Pow:
+            case AstExprBinary::Op::CompareNe:
+            case AstExprBinary::Op::CompareEq:
+            case AstExprBinary::Op::CompareLt:
+            case AstExprBinary::Op::CompareLe:
+            case AstExprBinary::Op::CompareGt:
+            case AstExprBinary::Op::CompareGe:
+                valid_operation = true;
+                break;
+
+            default:
+                valid_operation = false;
+        };
+
+        return valid_operation && isSolvable(expr_binary->left) && isSolvable(expr_binary->right);
     };
 
     return false;
 };
 
-double solve(AstExpr* expr) {
-    if (!isSolvable(expr))
-        return 0;
+Solved solve(AstExpr* expr) {
+    Solved result { .type = Solved::Type::Math, .math_result = 0 };
 
-    double value;
+    if (!isSolvable(expr))
+        return result;
+
     if (AstExprConstantNumber* expr_number = expr->as<AstExprConstantNumber>()) {
-        value = expr_number->value;
+        result.math_result = expr_number->value;
     } else if (AstExprGroup* expr_group = expr->as<AstExprGroup>()) {
-        value = solve(expr_group->expr);
+        result = solve(expr_group->expr);
     } else if (AstExprUnary* expr_unary = expr->as<AstExprUnary>()) {
-        value = solve(expr_unary->expr);
+        result = solve(expr_unary->expr);
 
         switch (expr_unary->op) {
             case AstExprUnary::Op::Minus:
-                value = -value;
+                result.math_result = -result.math_result;
                 break;
             default:
                 break;
         };
     } else if (AstExprBinary* expr_binary = expr->as<AstExprBinary>()) {
-        double left = solve(expr_binary->left);
-        double right = solve(expr_binary->right);
+        Solved left = solve(expr_binary->left);
+        Solved right = solve(expr_binary->right);
 
         switch (expr_binary->op) {
             case AstExprBinary::Op::Add:
-                value = left + right;
+                result.math_result = left.math_result + right.math_result;
                 break;
             case AstExprBinary::Op::Sub:
-                value = left - right;
+                result.math_result = left.math_result - right.math_result;
                 break;
             case AstExprBinary::Op::Mul:
-                value = left * right;
+                result.math_result = left.math_result * right.math_result;
                 break;
             case AstExprBinary::Op::Div:
-                value = left / right;
+                result.math_result = left.math_result / right.math_result;
                 break;
             case AstExprBinary::Op::FloorDiv:
                 // FIXME: this is wrong
-                value = floor(left / right);
+                result.math_result = floor(left.math_result / right.math_result);
                 break;
             case AstExprBinary::Op::Mod:
-                value = (int) left % (int) right;
+                result.math_result = (int) left.math_result % (int) right.math_result;
                 break;
             case AstExprBinary::Op::Pow:
-                value = pow(left, right);
+                result.math_result = pow(left.math_result, right.math_result);
                 break;
+            case AstExprBinary::Op::CompareNe:
+                result.type = Solved::Type::Comparison;
+                switch (left.type) {
+                    case Solved::Type::Math:
+                        result.comparison_result = left.math_result != right.math_result;
+                        break;
+                    case Solved::Type::Comparison:
+                        result.comparison_result = left.comparison_result != right.comparison_result;
+                        break;
+                };
+                break;
+            case AstExprBinary::Op::CompareEq:
+                result.type = Solved::Type::Comparison;
+                switch (left.type) {
+                    case Solved::Type::Math:
+                        result.comparison_result = left.math_result == right.math_result;
+                        break;
+                    case Solved::Type::Comparison:
+                        result.comparison_result = left.comparison_result == right.comparison_result;
+                        break;
+                };
+                break;
+            case AstExprBinary::Op::CompareLt:
+                result.type = Solved::Type::Comparison;
+                switch (left.type) {
+                    case Solved::Type::Math:
+                        result.comparison_result = left.math_result < right.math_result;
+                        break;
+                    case Solved::Type::Comparison:
+                        result.comparison_result = left.comparison_result < right.comparison_result;
+                        break;
+                };
+                break;
+            case AstExprBinary::Op::CompareLe:
+                result.type = Solved::Type::Comparison;
+                switch (left.type) {
+                    case Solved::Type::Math:
+                        result.comparison_result = left.math_result <= right.math_result;
+                        break;
+                    case Solved::Type::Comparison:
+                        result.comparison_result = left.comparison_result <= right.comparison_result;
+                        break;
+                };
+                break;
+            case AstExprBinary::Op::CompareGt:
+                result.type = Solved::Type::Comparison;
+                switch (left.type) {
+                    case Solved::Type::Math:
+                        result.comparison_result = left.math_result > right.math_result;
+                        break;
+                    case Solved::Type::Comparison:
+                        result.comparison_result = left.comparison_result > right.comparison_result;
+                        break;
+                };
+                break;
+            case AstExprBinary::Op::CompareGe:
+                result.type = Solved::Type::Comparison;
+                switch (left.type) {
+                    case Solved::Type::Math:
+                        result.comparison_result = left.math_result >= right.math_result;
+                        break;
+                    case Solved::Type::Comparison:
+                        result.comparison_result = left.comparison_result >= right.comparison_result;
+                        break;
+                };
+                break;
+
             default:
                 break;
         };
     };
 
-    return value;
+    return result;
 };
 
 void setNoSolve(bool nosolve_in) {
     nosolve = nosolve_in;
+};
+
+std::string convertNumber(double value) {
+    double decimal, integer;
+
+    decimal = modf(value, &integer);
+
+    std::string result;
+
+    if (decimal == 0) {
+        result = std::to_string(integer);
+    } else {
+        char str[500];
+        sprintf(str, "%.15f", value);
+
+        result = str;
+    };
+
+    if (result == "inf") {
+        result = "math.huge";
+    } else {
+        while (result.length() > 2 && result[result.length() - 1] == '0')
+            result.erase(result.length() - 1, 1);
+
+        if (result[result.length() - 1] == '.')
+            result.erase(result.length() - 1, 1);
+    };
+
+    return result;
 };

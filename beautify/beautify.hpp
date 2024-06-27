@@ -37,6 +37,5 @@ astlist(array, type); \
 result.append(")")
 
 
-std::string convertNumber(double value);
 std::string fixString(Luau::AstArray<char> value);
 std::string beautifyRoot(Luau::AstStatBlock* root, bool nosolve);

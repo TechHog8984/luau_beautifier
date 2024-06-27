@@ -24,7 +24,7 @@ std::string minify(Luau::AstNode* node) {
         if (AstExprGroup* expr_group = expr->as<AstExprGroup>()) {
             result = '(';
             if (isSolvable(expr_group)) {
-                result.append(convertNumber(solve(expr_group)));
+                appendSolve(expr_group);
             } else {
                 result.append(minify(expr_group->expr));
             };
@@ -106,14 +106,14 @@ std::string minify(Luau::AstNode* node) {
             };
         } else if (AstExprUnary* expr_unary = expr->as<AstExprUnary>()) {
             if (isSolvable(expr_unary)) {
-                result.append(convertNumber(solve(expr_unary)));
+                result.append(convertNumber(solve(expr_unary).math_result));
             } else {
                 result.append(unary_operators[expr_unary->op]);
                 result.append(minify(expr_unary->expr));
             }
         } else if (AstExprBinary* expr_binary = expr->as<AstExprBinary>()) {
             if (isSolvable(expr_binary)) {
-                result.append(convertNumber(solve(expr_binary)));
+                appendSolve(expr_binary);
             } else {
                 result.append(minify(expr_binary->left));
                 result.append(" ");
