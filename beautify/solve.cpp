@@ -7,6 +7,16 @@ using namespace Luau;
 
 bool nosolve;
 
+bool isExpressionString(AstExpr* expr) {
+    if (AstExprConstantString* expr_const = expr->as<AstExprConstantString>()) {
+        return true;
+    } else if (AstExprGroup* expr_group = expr->as<AstExprGroup>()) {
+        return isExpressionString(expr_group->expr);
+    };
+
+    return false;
+};
+
 bool isSolvable(AstExpr* expr) {
     if (nosolve)
         return false;
@@ -35,6 +45,10 @@ bool isSolvable(AstExpr* expr) {
             case AstExprBinary::Op::CompareGe:
                 valid_operation = true;
                 break;
+
+            case AstExprBinary::Op::And:
+            case AstExprBinary::Op::Or:
+                return isExpressionString(expr_binary->left) && isExpressionString(expr_binary->right);
 
             default:
                 valid_operation = false;
@@ -102,6 +116,7 @@ Solved solve(AstExpr* expr) {
                     case Solved::Type::Comparison:
                         result.comparison_result = left.comparison_result != right.comparison_result;
                         break;
+                    default: break;
                 };
                 break;
             case AstExprBinary::Op::CompareEq:
@@ -113,6 +128,7 @@ Solved solve(AstExpr* expr) {
                     case Solved::Type::Comparison:
                         result.comparison_result = left.comparison_result == right.comparison_result;
                         break;
+                    default: break;
                 };
                 break;
             case AstExprBinary::Op::CompareLt:
@@ -124,6 +140,7 @@ Solved solve(AstExpr* expr) {
                     case Solved::Type::Comparison:
                         result.comparison_result = left.comparison_result < right.comparison_result;
                         break;
+                    default: break;
                 };
                 break;
             case AstExprBinary::Op::CompareLe:
@@ -135,6 +152,7 @@ Solved solve(AstExpr* expr) {
                     case Solved::Type::Comparison:
                         result.comparison_result = left.comparison_result <= right.comparison_result;
                         break;
+                    default: break;
                 };
                 break;
             case AstExprBinary::Op::CompareGt:
@@ -146,6 +164,7 @@ Solved solve(AstExpr* expr) {
                     case Solved::Type::Comparison:
                         result.comparison_result = left.comparison_result > right.comparison_result;
                         break;
+                    default: break;
                 };
                 break;
             case AstExprBinary::Op::CompareGe:
@@ -157,7 +176,17 @@ Solved solve(AstExpr* expr) {
                     case Solved::Type::Comparison:
                         result.comparison_result = left.comparison_result >= right.comparison_result;
                         break;
+                    default: break;
                 };
+                break;
+
+            case AstExprBinary::Op::And:
+                result.type = Solved::Type::String;
+                result.string_result = expr_binary->right;
+                break;
+            case AstExprBinary::Op::Or:
+                result.type = Solved::Type::String;
+                result.string_result = expr_binary->left;
                 break;
 
             default:

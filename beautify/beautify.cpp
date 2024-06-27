@@ -131,7 +131,7 @@ std::string beautify(AstNode* node) {
         if (AstExprGroup* expr_group = expr->as<AstExprGroup>()) {
             result = '(';
             if (isSolvable(expr_group)) {
-                appendSolve(expr_group);
+                appendSolve(expr_group, beautify);
             } else {
                 result.append(beautify(expr_group->expr));
             };
@@ -214,7 +214,7 @@ std::string beautify(AstNode* node) {
             }
         } else if (AstExprBinary* expr_binary = expr->as<AstExprBinary>()) {
             if (isSolvable(expr_binary)) {
-                appendSolve(expr_binary);
+                appendSolve(expr_binary, beautify);
             } else {
                 result.append(beautify(expr_binary->left));
                 result.append(" ");

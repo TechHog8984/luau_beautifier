@@ -7,13 +7,15 @@ using namespace Luau;
 struct Solved {
     enum Type {
         Math,
-        Comparison
+        Comparison,
+        String
     } type;
     double math_result;
     bool comparison_result;
+    AstExpr* string_result;
 };
 
-#define appendSolve(expr) \
+#define appendSolve(expr, format) \
 Solved solved = solve(expr); \
 switch (solved.type) { \
     case Solved::Type::Math: \
@@ -22,6 +24,8 @@ switch (solved.type) { \
     case Solved::Type::Comparison: \
         result.append(solved.comparison_result ? "true" : "false"); \
         break; \
+    case Solved::Type::String: \
+        result.append(format(solved.string_result)); \
 }
 
 bool isSolvable(AstExpr* expr);
