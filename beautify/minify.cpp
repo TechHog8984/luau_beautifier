@@ -173,11 +173,13 @@ std::string minify(Luau::AstNode* node) {
             result.append(minify(stat_if->condition));
             result.append(" then ");
 
+            m_dont_append_do = true;
             result.append(minify(stat_if->thenbody));
 
             if (stat_if->elsebody) {
                 optionalSpace;
                 result.append("else ");
+                m_dont_append_do = true;
                 result.append(minify(stat_if->elsebody));
             }
 
@@ -188,6 +190,7 @@ std::string minify(Luau::AstNode* node) {
             result.append(minify(stat_while->condition));
             result.append(" do ");
 
+            m_dont_append_do = true;
             result.append(minify(stat_while->body));
 
             optionalSpace;
@@ -195,6 +198,7 @@ std::string minify(Luau::AstNode* node) {
         } else if (AstStatRepeat* stat_repeat = stat->as<AstStatRepeat>()) {
             result.append("repeat ");
 
+            m_dont_append_do = true;
             result.append(minify(stat_repeat->body));
 
             optionalSpace;
@@ -238,6 +242,7 @@ std::string minify(Luau::AstNode* node) {
 
             result.append(" do ");
 
+            m_dont_append_do = true;
             result.append(minify(stat_for->body));
 
             optionalSpace;
@@ -249,6 +254,7 @@ std::string minify(Luau::AstNode* node) {
             astlist2(stat_for_in->values, AstExpr);
             result.append(" do ");
 
+            m_dont_append_do = true;
             result.append(minify(stat_for_in->body));
 
             optionalSpace;

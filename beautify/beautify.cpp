@@ -288,6 +288,7 @@ std::string beautify(AstNode* node) {
                 optionalNewline;
                 result.append("else\n");
                 indent++;
+                b_dont_append_do = true;
                 result.append(beautify(stat_if->elsebody));
                 indent--;
             }
@@ -409,11 +410,6 @@ std::string beautify(AstNode* node) {
             result.append(";");
         } else if (AstStatLocalFunction* stat_local_function = stat->as<AstStatLocalFunction>()) {
             addIndents;
-            // result.append("local ");
-            // result.append(beautify(stat_local_function->name));
-            // result.append(" = ");
-            // result.append(beautify(stat_local_function->func));
-            // result.append(";");
 
             result.append("local function ");
             result.append(beautify(stat_local_function->name));
