@@ -81,11 +81,7 @@ bool isConstant(AstExpr* expr) {
 
     expr = getRootExpr(expr);
 
-    if (expr->is<AstExprConstantNil>() || expr->is<AstExprConstantBool>() || expr->is<AstExprConstantNumber>() || expr->is<AstExprConstantString>()) {
-        return true;
-    };
-
-    return false;
+    return expr->is<AstExprConstantNil>() || expr->is<AstExprConstantBool>() || expr->is<AstExprConstantNumber>() || expr->is<AstExprConstantString>();
 };
 bool isConstantNumber(AstExpr* expr) {
     expr = getRootExpr(expr);
@@ -128,7 +124,7 @@ Solved solve(AstExpr* expr) {
             case AstExprUnary::Op::Minus:
                 if (isConstantNumber(expr_unary->expr))
                     result.type = Solved::Type::Number;
-                    result.number_result = -solve(getRootExpr(expr_unary->expr)).number_result;
+                    result.number_result = -solve(expr_unary->expr).number_result;
                 break;
 
             default:
