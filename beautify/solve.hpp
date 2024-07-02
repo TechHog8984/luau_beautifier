@@ -15,6 +15,8 @@ struct Solved {
     AstExpr* expression_result;
 };
 
+AstExpr* getRootExpr(AstExpr* expr);
+
 #define appendSolve(expr, format) \
 Solved solved = solve(expr); \
 switch (solved.type) { \
