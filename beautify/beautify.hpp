@@ -37,5 +37,7 @@ astlist(array, type); \
 result.append(")")
 
 
+void dontAppendDo();
+
 std::string fixString(Luau::AstArray<char> value);
 std::string beautifyRoot(Luau::AstStatBlock* root, bool nosolve);

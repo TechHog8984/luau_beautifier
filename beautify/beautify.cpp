@@ -124,6 +124,10 @@ bool skip_first_indent = false;
 bool b_is_root = true; // aka is first beautify call
 bool b_dont_append_do = false;
 
+void dontAppendDo() {
+    b_dont_append_do = true;
+};
+
 std::string beautify(AstNode* node) {
     std::string result = "";
 
