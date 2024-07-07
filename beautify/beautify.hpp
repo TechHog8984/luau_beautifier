@@ -36,7 +36,8 @@ result.append("("); \
 astlist(array, type); \
 result.append(")")
 
-
+typedef std::string InjectCallback(Luau::AstStat* stat, bool is_root);
+void setupInjectCallback(InjectCallback);
 void dontAppendDo();
 
 std::string fixString(Luau::AstArray<char> value);

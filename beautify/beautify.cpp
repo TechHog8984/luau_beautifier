@@ -124,6 +124,12 @@ bool skip_first_indent = false;
 bool b_is_root = true; // aka is first beautify call
 bool b_dont_append_do = false;
 
+InjectCallback* inject_callback;
+
+void setupInjectCallback(InjectCallback* callback) {
+    inject_callback = callback;
+};
+
 void dontAppendDo() {
     b_dont_append_do = true;
 };
@@ -253,6 +259,14 @@ std::string beautify(AstNode* node) {
             result.append("--[[ error: unknown expression type! ]]");
         };
     } else if (AstStat* stat = node->asStat()) {
+        if (inject_callback) {
+            std::string injection = inject_callback(stat, b_is_root);
+            if (!injection.empty()) {
+                addIndents;
+                result.append(injection);
+                result.append("\n");
+            };
+        };
         if (AstStatBlock* stat2 = stat->as<AstStatBlock>()) {
             bool append_do = stat2->hasEnd && !b_dont_append_do;
             if (b_is_root) {

@@ -51,6 +51,17 @@ int parseArgs(int* argc, char** argv, char** filepath, bool* minify, bool* nosol
     return 0;
 };
 
+// left here for demonstration purposes
+// InjectCallback comment_callback;
+// std::string comment_callback(Luau::AstStat* stat, bool is_root) {
+//     if (stat->is<Luau::AstStatExpr>())
+//         return "-- this is an expression";
+//     else if (!is_root && stat->is<Luau::AstStatBlock>())
+//         return "-- this is a block";
+
+//     return "";
+// };
+
 int main(int argc, char** argv) {
     if (argc == 0) // what?
         return displayHelp((char*) "luau-beautifier");
@@ -94,6 +105,9 @@ int main(int argc, char** argv) {
     };
 
     Luau::AstStatBlock* root = parse_result.root;
+
+    // left here for demonstration purposes
+    // setupInjectCallback(comment_callback);
 
     if (minify)
         printf("%s", minifyRoot(root, nosolve).c_str());
