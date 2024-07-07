@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 
 #include "Luau/Ast.h"
@@ -36,7 +37,16 @@ result.append("("); \
 astlist(array, type); \
 result.append(")")
 
-typedef std::string InjectCallback(Luau::AstStat* stat, bool is_root);
+std::string getIndents();
+
+struct Injection {
+    std::optional<std::string> replace; // replace
+    std::optional<std::string> prepend; // before
+    std::optional<std::string> append; // after
+    bool skip;
+};
+
+typedef Injection InjectCallback(Luau::AstStat* stat, bool is_root);
 void setupInjectCallback(InjectCallback);
 void dontAppendDo();
 

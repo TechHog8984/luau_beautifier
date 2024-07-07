@@ -58,6 +58,7 @@ indent--; \
 optionalNewline; \
 result.append("end")
 
+Injection INJECTION_NONE {};
 
 std::string fixString(AstArray<char> value) {
     std::string result = "\"";
@@ -123,6 +124,15 @@ int indent = 0;
 bool skip_first_indent = false;
 bool b_is_root = true; // aka is first beautify call
 bool b_dont_append_do = false;
+
+std::string getIndents() {
+    std::string result = "";
+    for (int _ = 0; _ < indent; _++) {
+        result.append("    ");
+    };
+
+    return result;
+};
 
 InjectCallback* inject_callback;
 
@@ -259,14 +269,23 @@ std::string beautify(AstNode* node) {
             result.append("--[[ error: unknown expression type! ]]");
         };
     } else if (AstStat* stat = node->asStat()) {
-        if (inject_callback) {
-            std::string injection = inject_callback(stat, b_is_root);
-            if (!injection.empty()) {
-                addIndents;
-                result.append(injection);
-                result.append("\n");
-            };
+        Injection injection = inject_callback ? inject_callback(stat, b_is_root) : INJECTION_NONE;
+
+        if (injection.skip || injection.replace) {
+            if (b_is_root)
+                b_is_root = false;
+
+            if (injection.skip)
+                return "";
+
+            return injection.replace.value();
         };
+
+        if (injection.prepend) {
+            addIndents;
+            result.append(*injection.prepend);
+        };
+
         if (AstStatBlock* stat2 = stat->as<AstStatBlock>()) {
             bool append_do = stat2->hasEnd && !b_dont_append_do;
             if (b_is_root) {
@@ -435,6 +454,10 @@ std::string beautify(AstNode* node) {
             beautifyFunction(stat_local_function->func);
         } else {
             result.append("--[[ error: unknown stat type! ]]");
+        };
+
+        if (injection.append) {
+            result.append(*injection.append);
         };
     };
 

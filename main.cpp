@@ -53,13 +53,16 @@ int parseArgs(int* argc, char** argv, char** filepath, bool* minify, bool* nosol
 
 // left here for demonstration purposes
 // InjectCallback comment_callback;
-// std::string comment_callback(Luau::AstStat* stat, bool is_root) {
+// Injection comment_callback(Luau::AstStat* stat, bool is_root) {
 //     if (stat->is<Luau::AstStatExpr>())
-//         return "-- this is an expression";
-//     else if (!is_root && stat->is<Luau::AstStatBlock>())
-//         return "-- this is a block";
+//         return { .skip = true };
+//     else if (!is_root && stat->is<Luau::AstStatBlock>()) {
+//         std::string append = getIndents();
+//         append.append("-- ^ this is a block\n");
+//         return { .prepend = "-- this is a block\n", .append = append };
+//     };
 
-//     return "";
+//     return {};
 // };
 
 int main(int argc, char** argv) {
