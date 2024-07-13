@@ -27,6 +27,7 @@ enum SolveResultType {
 bool isConstant(AstExpr* expr);
 bool isConstantNumber(AstExpr* expr);
 bool isConstantString(AstExpr* expr);
+bool isConstantTable(AstExpr* expr);
 
 SolveResultType getSolveResultType(AstExpr* expr) {
     SolveResultType result = None;
@@ -40,7 +41,10 @@ SolveResultType getSolveResultType(AstExpr* expr) {
                 if (isConstantNumber(expr_unary->expr))
                     result = Number;
                 break;
-
+            case AstExprUnary::Op::Len:
+                if (isConstantString(expr_unary->expr) || isConstantTable(expr_unary->expr))
+                    result = Number;
+                break;
             default:
                 break;
         };
@@ -68,9 +72,10 @@ SolveResultType getSolveResultType(AstExpr* expr) {
                     break;
             };
         };
-    } else if (getRootExpr(expr)->is<AstExprConstantNumber>()) {
+    } else if (getRootExpr(expr)->is<AstExprConstantNumber>())
         result = Number;
-    };
+    else if (getRootExpr(expr)->is<AstExprConstantString>())
+        result = String;
 
     return result;
 };
@@ -93,6 +98,11 @@ bool isConstantString(AstExpr* expr) {
 
     return expr->is<AstExprConstantString>() || getSolveResultType(expr) == String;
 };
+bool isConstantTable(AstExpr* expr) {
+    expr = getRootExpr(expr);
+
+    return expr->is<AstExprTable>();
+};
 
 bool isSolvable(AstExpr* expr) {
     return getSolveResultType(expr) != None;
@@ -111,20 +121,35 @@ Solved solve(AstExpr* expr) {
 
     Solved result = {};
 
-    if (AstExprConstantNumber* expr_number = expr->as<AstExprConstantNumber>()){
+    if (AstExprConstantNumber* expr_number = expr->as<AstExprConstantNumber>()) {
         result.type = Solved::Type::Number;
         result.number_result = expr_number->value;
+    } else if (AstExprConstantString* expr_string = expr->as<AstExprConstantString>()) {
+        result.type = Solved::Type::Expression;
+        result.expression_result = expr_string;
     } else if (AstExprUnary* expr_unary = expr->as<AstExprUnary>()) {
         switch (expr_unary->op) {
             case AstExprUnary::Op::Not:
-                if (isConstant(expr_unary->expr))
+                if (isConstant(expr_unary->expr)) {
                     result.type = Solved::Type::Bool;
                     result.bool_result = isFalsey(getRootExpr(expr_unary->expr));
+                };
                 break;
             case AstExprUnary::Op::Minus:
-                if (isConstantNumber(expr_unary->expr))
+                if (isConstantNumber(expr_unary->expr)) {
                     result.type = Solved::Type::Number;
                     result.number_result = -solve(expr_unary->expr).number_result;
+                };
+                break;
+            case AstExprUnary::Op::Len:
+                if (isConstantString(expr_unary->expr)) {
+                    result.type = Solved::Type::Number;
+                    result.number_result = solve(expr_unary->expr).expression_result->as<AstExprConstantString>()->value.size;
+                } else if (isConstantTable(expr_unary->expr)) {
+                    result.type = Solved::Type::Number;
+                    result.number_result = getRootExpr(expr_unary->expr)->as<AstExprTable>()->items.size;
+                };
+
                 break;
 
             default:

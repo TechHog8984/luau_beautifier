@@ -37,7 +37,7 @@ result.append("("); \
 astlist(array, type); \
 result.append(")")
 
-std::string getIndents();
+std::string getIndents(int offset = 0);
 
 struct Injection {
     std::optional<std::string> replace; // replace
