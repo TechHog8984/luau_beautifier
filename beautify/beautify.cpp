@@ -125,9 +125,9 @@ bool skip_first_indent = false;
 bool b_is_root = true; // aka is first beautify call
 bool b_dont_append_do = false;
 
-std::string getIndents() {
+std::string getIndents(int offset) {
     std::string result = "";
-    for (int _ = 0; _ < indent; _++) {
+    for (int _ = 0; _ < indent + offset; _++) {
         result.append("    ");
     };
 
