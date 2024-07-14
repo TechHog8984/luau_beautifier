@@ -5,6 +5,10 @@ A beautifier for Luau written in C++
 ## Replit
 You can use luau_beautifier without compiling with [this replit](https://replit.com/@TechHog/luaubeautifier-site).
 
+![](assets/replit1.png)
+![](assets/replit2.png)
+![](assets/replit3.png)
+
 ## Build
 > ```sh
 > $ make
