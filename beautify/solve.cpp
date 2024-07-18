@@ -299,9 +299,11 @@ std::string convertNumber(double value) {
         result = str;
     };
 
-    if (result == "inf") {
+    if (result == "inf")
         result = "math.huge";
-    } else {
+    else if (result == "-nan")
+        result = "(0/0)";
+    else {
         while (result.length() > 2 && result[result.length() - 1] == '0')
             result.erase(result.length() - 1, 1);
 
