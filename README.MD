@@ -11,7 +11,7 @@ You can use luau_beautifier without compiling with [this replit](https://replit.
 
 ## Build
 > ```sh
-> $ make
+> $ make -s
 > ```
 
 ## Usage
