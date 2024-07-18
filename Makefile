@@ -15,6 +15,7 @@ build:
 		echo "building luau..."; \
 		g++ -c $(LUAU_SOURCES_BUILD) $(LUAU_INCLUDE_BUILD); \
 		echo "luau built!"; \
+		cd ..; \
 	fi
 	echo "building beautifier...";
 	g++ main.cpp beautify/*.cpp luau_build/*.o -o luau-beautifier -Ibeautify $(LUAU_INCLUDE);
