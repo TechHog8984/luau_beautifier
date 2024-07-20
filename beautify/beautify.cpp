@@ -145,6 +145,9 @@ void dontAppendDo() {
     b_dont_append_do = true;
 };
 
+bool replace_if_expressions;
+void replaceIfElse(std::string* out, AstExprIfElse* expr, std::string var, bool use_local = false);
+
 std::string beautify(AstNode* node) {
     std::string result = "";
 
@@ -388,42 +391,13 @@ std::string beautify(AstNode* node) {
                         break;
                     };
 
-            if (all_values_are_ifelse_exprs) {
+            if (replace_if_expressions && all_values_are_ifelse_exprs) {
                 AstExprIfElse** expr_if_else = reinterpret_cast<AstExprIfElse**>(stat_local->values.data);
                 for (int index = 0; index < stat_local->values.size; index++) {
-                    addIndents;
-                    result.append("local ");
-                    result.append(beautify(stat_local->vars.data[index]));
-                    result.append(";\n");
-                    addIndents;
+                    replaceIfElse(&result, (*expr_if_else), beautify(stat_local->vars.data[index]), true);
 
-                    result.append("if ");
-                    result.append(beautify((*expr_if_else)->condition));
-                    result.append(" then\n");
-
-                    indent++;
-                    addIndents;
-                    result.append(beautify(stat_local->vars.data[index]));
-                    result.append(" = ");
-                    result.append(beautify((*expr_if_else)->trueExpr));
-                    result.append(";\n");
-                    indent--;
-
-                    addIndents;
-                    result.append("else\n");
-                    indent++;
-                    addIndents;
-                    result.append(beautify(stat_local->vars.data[index]));
-                    result.append(" = ");
-                    result.append(beautify((*expr_if_else)->falseExpr));
-                    result.append(";\n");
-                    indent--;
-
-                    addIndents;
-                    result.append("end;");
-                    if (index + 1 < stat_local->values.size)
-                        result += '\n';
-
+                    if (index == stat_local->values.size - 1)
+                        result.erase(result.length() - 1, 1);
                     expr_if_else++;
                 };
             } else {
@@ -483,37 +457,13 @@ std::string beautify(AstNode* node) {
                         break;
                     };
 
-            if (all_values_are_ifelse_exprs) {
+            if (replace_if_expressions && all_values_are_ifelse_exprs) {
                 AstExprIfElse** expr_if_else = reinterpret_cast<AstExprIfElse**>(stat_assign->values.data);
                 for (int index = 0; index < stat_assign->values.size; index++) {
-                    addIndents;
-                    result.append("if ");
-                    result.append(beautify((*expr_if_else)->condition));
-                    result.append(" then\n");
+                    replaceIfElse(&result, (*expr_if_else), beautify(stat_assign->vars.data[index]));
 
-                    indent++;
-                    addIndents;
-                    result.append(beautify(stat_assign->vars.data[index]));
-                    result.append(" = ");
-                    result.append(beautify((*expr_if_else)->trueExpr));
-                    result.append(";\n");
-                    indent--;
-
-                    addIndents;
-                    result.append("else\n");
-                    indent++;
-                    addIndents;
-                    result.append(beautify(stat_assign->vars.data[index]));
-                    result.append(" = ");
-                    result.append(beautify((*expr_if_else)->falseExpr));
-                    result.append(";\n");
-                    indent--;
-
-                    addIndents;
-                    result.append("end;");
-                    if (index + 1 < stat_assign->values.size)
-                        result += '\n';
-
+                    if (index == stat_assign->values.size - 1)
+                        result.erase(result.length() - 1, 1);
                     expr_if_else++;
                 };
             } else {
@@ -558,7 +508,55 @@ std::string beautify(AstNode* node) {
     return result;
 };
 
-std::string beautifyRoot(AstStatBlock* root, bool nosolve_in) {
+void replaceIfElse(std::string* out, AstExprIfElse* expr, std::string var, bool use_local) {
+    std::string result = *out;
+    addIndents;
+    if (use_local) {
+        result.append("local ");
+        result.append(var);
+        result.append(";\n");
+        addIndents;
+    };
+
+    result.append("if ");
+    result.append(beautify(expr->condition));
+    result.append(" then\n");
+
+    indent++;
+    if (getRootExpr(expr->trueExpr)->is<AstExprIfElse>())
+        replaceIfElse(&result, getRootExpr(expr->trueExpr)->as<AstExprIfElse>(), var);
+    else {
+        addIndents;
+        result.append(var);
+        result.append(" = ");
+        result.append(beautify(expr->trueExpr));
+        result.append(";\n");
+    };
+    indent--;
+
+    addIndents;
+    result.append("else\n");
+    indent++;
+    if (getRootExpr(expr->falseExpr)->is<AstExprIfElse>())
+        replaceIfElse(&result, getRootExpr(expr->falseExpr)->as<AstExprIfElse>(), var);
+    else {
+        addIndents;
+        result.append(var);
+        result.append(" = ");
+        result.append(beautify(expr->falseExpr));
+        result.append(";\n");
+    };
+    indent--;
+
+    addIndents;
+    result.append("end;\n");
+
+    out->replace(0, out->size(), result.c_str());
+};
+
+
+std::string beautifyRoot(AstStatBlock* root, bool nosolve_in, bool replace_if_expressions_in) {
+    replace_if_expressions = replace_if_expressions_in;
     setNoSolve(nosolve_in);
     return beautify(root);
 };

@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
     if (minify)
         printf("%s", minifyRoot(root, nosolve).c_str());
     else
-        printf("%s", beautifyRoot(root, nosolve).c_str());
+        printf("%s", beautifyRoot(root, nosolve, replace_if_expressions).c_str());
 
     return 0;
 }
