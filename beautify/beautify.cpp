@@ -1,4 +1,5 @@
 #include "beautify.hpp"
+#include "Luau/Ast.h"
 #include "solve.hpp"
 
 #include <cstring>
@@ -378,14 +379,63 @@ std::string beautify(AstNode* node) {
             result.append(beautify(stat_expr->expr));
             result.append(";");
         } else if (AstStatLocal* stat_local = stat->as<AstStatLocal>()) {
-            addIndents;
-            result.append("local ");
-            astlist(stat_local->vars, AstLocal);
-            if (stat_local->values.size > 0) {
-                result.append(" = ");
-                astlist2(stat_local->values, AstExpr);
+            bool has_values = stat_local->values.size > 0;
+            bool all_values_are_ifelse_exprs = has_values;
+            if (has_values)
+                for (AstExpr* expr : stat_local->values)
+                    if (!expr->is<AstExprIfElse>()) {
+                        all_values_are_ifelse_exprs = false;
+                        break;
+                    };
+
+            if (all_values_are_ifelse_exprs) {
+                AstExprIfElse** expr_if_else = reinterpret_cast<AstExprIfElse**>(stat_local->values.data);
+                for (int index = 0; index < stat_local->values.size; index++) {
+                    addIndents;
+                    result.append("local ");
+                    result.append(beautify(stat_local->vars.data[index]));
+                    result.append(";\n");
+                    addIndents;
+
+                    result.append("if ");
+                    result.append(beautify((*expr_if_else)->condition));
+                    result.append(" then\n");
+
+                    indent++;
+                    addIndents;
+                    result.append(beautify(stat_local->vars.data[index]));
+                    result.append(" = ");
+                    result.append(beautify((*expr_if_else)->trueExpr));
+                    result.append(";\n");
+                    indent--;
+
+                    addIndents;
+                    result.append("else\n");
+                    indent++;
+                    addIndents;
+                    result.append(beautify(stat_local->vars.data[index]));
+                    result.append(" = ");
+                    result.append(beautify((*expr_if_else)->falseExpr));
+                    result.append(";\n");
+                    indent--;
+
+                    addIndents;
+                    result.append("end;");
+                    if (index + 1 < stat_local->values.size)
+                        result += '\n';
+
+                    expr_if_else++;
+                };
+            } else {
+                addIndents;
+                result.append("local ");
+                astlist(stat_local->vars, AstLocal);
+                if (has_values) {
+                    result.append(" = ");
+                    astlist2(stat_local->values, AstExpr);
+                };
+                result.append(";");
             };
-            result.append(";");
         } else if (AstStatFor* stat_for = stat->as<AstStatFor>()) {
             addIndents;
             result.append("for ");
@@ -424,13 +474,57 @@ std::string beautify(AstNode* node) {
             optionalNewline;
             result.append("end;");
         } else if (AstStatAssign* stat_assign = stat->as<AstStatAssign>()) {
-            addIndents;
-            astlist(stat_assign->vars, AstExpr);
-            if (stat_assign->values.size > 0) {
-                result.append(" = ");
-                astlist2(stat_assign->values, AstExpr);
+            bool has_values = stat_assign->values.size > 0;
+            bool all_values_are_ifelse_exprs = has_values;
+            if (has_values)
+                for (AstExpr* expr : stat_assign->values)
+                    if (!expr->is<AstExprIfElse>()) {
+                        all_values_are_ifelse_exprs = false;
+                        break;
+                    };
+
+            if (all_values_are_ifelse_exprs) {
+                AstExprIfElse** expr_if_else = reinterpret_cast<AstExprIfElse**>(stat_assign->values.data);
+                for (int index = 0; index < stat_assign->values.size; index++) {
+                    addIndents;
+                    result.append("if ");
+                    result.append(beautify((*expr_if_else)->condition));
+                    result.append(" then\n");
+
+                    indent++;
+                    addIndents;
+                    result.append(beautify(stat_assign->vars.data[index]));
+                    result.append(" = ");
+                    result.append(beautify((*expr_if_else)->trueExpr));
+                    result.append(";\n");
+                    indent--;
+
+                    addIndents;
+                    result.append("else\n");
+                    indent++;
+                    addIndents;
+                    result.append(beautify(stat_assign->vars.data[index]));
+                    result.append(" = ");
+                    result.append(beautify((*expr_if_else)->falseExpr));
+                    result.append(";\n");
+                    indent--;
+
+                    addIndents;
+                    result.append("end;");
+                    if (index + 1 < stat_assign->values.size)
+                        result += '\n';
+
+                    expr_if_else++;
+                };
+            } else {
+                addIndents;
+                astlist(stat_assign->vars, AstExpr);
+                if (has_values) {
+                    result.append(" = ");
+                    astlist2(stat_assign->values, AstExpr);
+                };
+                result.append(";");
             };
-            result.append(";");
         } else if (AstStatCompoundAssign* stat_compound_assign = stat->as<AstStatCompoundAssign>()) {
             addIndents;
             result.append(beautify(stat_compound_assign->var));
