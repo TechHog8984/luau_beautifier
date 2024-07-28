@@ -175,8 +175,12 @@ std::string beautify(AstNode* node) {
         } else if (AstExprVarargs* expr_varargs = expr->as<AstExprVarargs>()) {
             result = "...";
         } else if (AstExprCall* expr_call = expr->as<AstExprCall>()) {
-            result = beautify(expr_call->func);
-            tuple(expr_call->args, AstExpr);
+            if (isSolvable(expr_call)) {
+                appendSolve(expr_call, beautify);
+            } else {
+                result = beautify(expr_call->func);
+                tuple(expr_call->args, AstExpr);
+            };
         } else if (AstExprIndexName* expr_index_name = expr->as<AstExprIndexName>()) {
             result = beautify(expr_index_name->expr);
             result.append(std::string{expr_index_name->op});
@@ -231,7 +235,7 @@ std::string beautify(AstNode* node) {
             };
         } else if (AstExprUnary* expr_unary = expr->as<AstExprUnary>()) {
             if (isSolvable(expr_unary)) {
-                appendSolve(expr, beautify);
+                appendSolve(expr_unary, beautify);
             } else {
                 result.append(unary_operators[expr_unary->op]);
                 result.append(beautify(expr_unary->expr));

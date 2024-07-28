@@ -1,3 +1,4 @@
 *.lua
 luau-beautifier
 luau_build
+launch.json

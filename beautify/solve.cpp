@@ -29,6 +29,53 @@ bool isConstantNumber(AstExpr* expr);
 bool isConstantString(AstExpr* expr);
 bool isConstantTable(AstExpr* expr);
 
+bool isBinaryMath(AstExprBinary* expr_binary) {
+    switch (expr_binary->op) {
+        case AstExprBinary::Op::Add:
+        case AstExprBinary::Op::Sub:
+        case AstExprBinary::Op::Mul:
+        case AstExprBinary::Op::Div:
+        case AstExprBinary::Op::FloorDiv:
+        case AstExprBinary::Op::Mod:
+        case AstExprBinary::Op::Pow:
+            return true;
+
+        default:
+            return false;
+    }
+};
+
+double solveBinary(AstExprBinary::Op op, double left, double right) {
+    switch (op) {
+        case AstExprBinary::Op::Add:
+            return left + right;
+            break;
+        case AstExprBinary::Op::Sub:
+            return left - right;
+            break;
+        case AstExprBinary::Op::Mul:
+            return left * right;
+            break;
+        case AstExprBinary::Op::Div:
+            return left / right;
+            break;
+        case AstExprBinary::Op::FloorDiv:
+            // TODO: double check floordiv implementation
+            return floor(left / right);
+            break;
+        case AstExprBinary::Op::Mod:
+            return (int) left % (int) right;
+            break;
+        case AstExprBinary::Op::Pow:
+            return pow(left, right);
+            break;
+
+        default:
+            fprintf(stderr, "solveBinary expected a math operator\n");
+            exit(1);
+    };
+};
+
 SolveResultType getSolveResultType(AstExpr* expr) {
     SolveResultType result = None;
     if (AstExprUnary* expr_unary = expr->as<AstExprUnary>()) {
@@ -76,6 +123,29 @@ SolveResultType getSolveResultType(AstExpr* expr) {
         result = Number;
     else if (getRootExpr(expr)->is<AstExprConstantString>())
         result = String;
+    // (function(A) return (#A - 9) end)("some string")
+    else if (AstExprCall* expr_call = getRootExpr(expr)->as<AstExprCall>()) // ?expr?(?expr?,)
+        if (AstExprFunction* expr_function = getRootExpr(expr_call->func)->as<AstExprFunction>()) // (function(?local?,) ?stat?, end)(?expr?,)
+            if (expr_function->body->body.size == 1) // (function(?local?,) ?stat? end)(?expr?,)
+                if (AstStatReturn* stat_return = expr_function->body->body.data[0]->as<AstStatReturn>()) // (function(?local?,) return ?expr?, end)(?expr?,)
+                    if (stat_return->list.size == 1) // (function(?local?,) return ?expr? end)(?expr?,)
+                        if (AstExprBinary* expr_binary = getRootExpr(stat_return->list.data[0])->as<AstExprBinary>()) // (function(?local?,) return ?exprbinary? end)(?expr?,)
+                            if (isSolvable(expr_binary->right) && isBinaryMath(expr_binary)) {
+                                Solved binary_right = solve(expr_binary->right);
+                                if (binary_right.type == Solved::Type::Number) // (function(?local?,) return ?exprunary? ?op? ?number? end)(?expr?,)
+                                    if (AstExprUnary* left = getRootExpr(expr_binary->left)->as<AstExprUnary>()) // (function(?local?,) return ?exprunary? ?op? ?number? end)(?expr?,)
+                                        if (left->op == AstExprUnary::Op::Len) // (function(?local?,) return #?expr? ?op? ?number? end)(?expr?,)
+                                            if (AstExprLocal* unary_expr = getRootExpr(left->expr)->as<AstExprLocal>()) // (function(?local?,) return #?local? ?op? ?number? end)(?expr?,)
+                                                if (expr_call->args.size == 1) // (function(?local?,) return #?local? ?op? ?number? end)(?expr?)
+                                                    if (AstExprConstantString* arg_passed = getRootExpr(expr_call->args.data[0])->as<AstExprConstantString>()) { // (function(?local?,) return #?local? ?op? ?number? end)(?string?)
+                                                        char* arg_passed_str = arg_passed->value.data;
+                                                        if (expr_function->args.size == 1) { // (function(?local?) return #?local? ?op? ?number? end)(?string?)
+                                                            AstLocal* arg_received = expr_function->args.data[0];
+                                                            if (strcmp(arg_received->name.value, unary_expr->local->name.value) == 0) // (function(arg) return #arg ?op? ?number? end)(?string?)
+                                                                result = Number;
+                                                        };
+                                                    };
+                            };
 
     return result;
 };
@@ -274,7 +344,30 @@ Solved solve(AstExpr* expr) {
                     break;
             };
         };
-    };
+    } else if (AstExprCall* expr_call = getRootExpr(expr)->as<AstExprCall>()) // ?expr?(?expr?,)
+        if (AstExprFunction* expr_function = getRootExpr(expr_call->func)->as<AstExprFunction>()) // (function(?local?,) ?stat?, end)(?expr?,)
+            if (expr_function->body->body.size == 1) // (function(?local?,) ?stat? end)(?expr?,)
+                if (AstStatReturn* stat_return = expr_function->body->body.data[0]->as<AstStatReturn>()) // (function(?local?,) return ?expr?, end)(?expr?,)
+                    if (stat_return->list.size == 1) // (function(?local?,) return ?expr? end)(?expr?,)
+                        if (AstExprBinary* expr_binary = getRootExpr(stat_return->list.data[0])->as<AstExprBinary>()) // (function(?local?,) return ?exprbinary? end)(?expr?,)
+                            if (isSolvable(expr_binary->right) && isBinaryMath(expr_binary)) {
+                                Solved binary_right = solve(expr_binary->right);
+                                if (binary_right.type == Solved::Type::Number) // (function(?local?,) return ?exprunary? ?op? ?number? end)(?expr?,)
+                                    if (AstExprUnary* left = getRootExpr(expr_binary->left)->as<AstExprUnary>()) // (function(?local?,) return ?exprunary? ?op? ?number? end)(?expr?,)
+                                        if (left->op == AstExprUnary::Op::Len) // (function(?local?,) return #?expr? ?op? ?number? end)(?expr?,)
+                                            if (AstExprLocal* unary_expr = getRootExpr(left->expr)->as<AstExprLocal>()) // (function(?local?,) return #?local? ?op? ?number? end)(?expr?,)
+                                                if (expr_call->args.size == 1) // (function(?local?,) return #?local? ?op? ?number? end)(?expr?)
+                                                    if (AstExprConstantString* arg_passed = getRootExpr(expr_call->args.data[0])->as<AstExprConstantString>()) { // (function(?local?,) return #?local? ?op? ?number? end)(?string?)
+                                                        char* arg_passed_str = arg_passed->value.data;
+                                                        if (expr_function->args.size == 1) { // (function(?local?) return #?local? ?op? ?number? end)(?string?)
+                                                            AstLocal* arg_received = expr_function->args.data[0];
+                                                            if (strcmp(arg_received->name.value, unary_expr->local->name.value) == 0) { // (function(arg) return #arg ?op? ?number? end)(?string?)
+                                                                result.type = Solved::Type::Number;
+                                                                result.number_result = solveBinary(expr_binary->op, strlen(arg_passed_str), binary_right.number_result);
+                                                            };
+                                                        };
+                                                    };
+                            };
 
     return result;
 };

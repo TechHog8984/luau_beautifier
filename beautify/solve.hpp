@@ -28,6 +28,7 @@ switch (solved.type) { \
         break; \
     case Solved::Type::Expression: \
         result.append(format(solved.expression_result)); \
+        break; \
 }
 
 bool isSolvable(AstExpr* expr);
