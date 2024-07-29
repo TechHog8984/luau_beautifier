@@ -14,6 +14,11 @@ You can use luau_beautifier without compiling with [this replit](https://replit.
 > $ make -s
 > ```
 
+## Build (web assembly)
+> ```sh
+> $ make wasm
+> ```
+
 ## Usage
 > Usage: ./luau-beautifier [options] [file]
 > <br></br>

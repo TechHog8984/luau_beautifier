@@ -1,4 +1,7 @@
 *.lua
+*.html
+*.js
+*.wasm
 luau-beautifier
 luau_build
 launch.json

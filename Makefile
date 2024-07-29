@@ -18,4 +18,7 @@ build:
 		cd ..; \
 	fi
 	echo "building beautifier...";
-	g++ main.cpp beautify/*.cpp luau_build/*.o -o luau-beautifier -Ibeautify $(LUAU_INCLUDE);
+	g++ main.cpp handle.cpp beautify/*.cpp luau_build/*.o -o luau-beautifier -Ibeautify $(LUAU_INCLUDE);
+
+wasm:
+	emcc -lembind handle.cpp beautify/*.cpp $(LUAU_SOURCES) -o luau-beautifier.js -Ibeautify $(LUAU_INCLUDE);
