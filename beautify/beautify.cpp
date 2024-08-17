@@ -277,7 +277,7 @@ std::string beautify(AstNode* node) {
             result.append(beautify(expr_type_assertion->expr))
                 .append("::").append(beautify(expr_type_assertion->annotation));
         } else {
-            result.append("--[[ error: unknown expression type! ]]");
+            result.append("--[[ error: unknown expression type ").append(std::to_string(expr->classIndex)).append("! ]]");
         };
     } else if (AstStat* stat = node->asStat()) {
         Injection injection = inject_callback ? inject_callback(stat, b_is_root) : INJECTION_NONE;
@@ -504,7 +504,7 @@ std::string beautify(AstNode* node) {
 
             beautifyFunction(stat_local_function->func);
         } else {
-            result.append("--[[ error: unknown stat type! ]]");
+            result.append("--[[ error: unknown stat type ").append(std::to_string(stat->classIndex)).append("! ]]");
         };
 
         if (injection.append) {
@@ -523,7 +523,7 @@ std::string beautify(AstNode* node) {
                 result += '>';
             }
         } else {
-            result.append("--[[ error: unknown type type! ]]");
+            result.append("--[[ error: unknown type type ").append(std::to_string(type->classIndex)).append("! ]]");
         }
     }
 
