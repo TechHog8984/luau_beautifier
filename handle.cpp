@@ -56,8 +56,17 @@ std::string handleSource(std::string source, bool minify, bool nosolve, bool rep
 
     if (minify)
         return minifyRoot(root, nosolve);
-    else
-        return beautifyRoot(root, nosolve, replace_if_expressions);
+    else {
+        std::string preface;
+
+        for (Luau::HotComment hot_comment : parse_result.hotcomments) {
+            preface.append("--!")
+                .append(hot_comment.content);
+            preface += '\n';
+        }
+
+        return preface.append(beautifyRoot(root, nosolve, replace_if_expressions));
+    };
 };
 
 #if defined(__EMSCRIPTEN__)
