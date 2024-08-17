@@ -273,6 +273,9 @@ std::string beautify(AstNode* node) {
             };
 
             result.append("`");
+        } else if (AstExprTypeAssertion* expr_type_assertion = expr->as<AstExprTypeAssertion>()) {
+            result.append(beautify(expr_type_assertion->expr))
+                .append("::").append(beautify(expr_type_assertion->annotation));
         } else {
             result.append("--[[ error: unknown expression type! ]]");
         };
@@ -507,7 +510,22 @@ std::string beautify(AstNode* node) {
         if (injection.append) {
             result.append(*injection.append);
         };
-    };
+    } else if (AstType* type = node->asType()) {
+        if (AstTypeReference* type_reference = type->as<AstTypeReference>()) {
+            result.append(type_reference->name.value);
+            if (type_reference->hasParameterList) {
+                result += '<';
+                for (AstTypeOrPack type_or_pack : type_reference->parameters) {
+                    result.append(beautify(type_or_pack.typePack == nullptr ? type_or_pack.type->asType() : type_or_pack.typePack->asType()));
+                    result.append(", ");
+                }
+                result.erase(result.size() - 2, 2);
+                result += '>';
+            }
+        } else {
+            result.append("--[[ error: unknown type type! ]]");
+        }
+    }
 
     return result;
 };
