@@ -124,6 +124,7 @@ std::string beautify(AstLocal* local) {
 
 int indent = 0;
 bool skip_first_indent = false;
+int skip_count = -1;
 bool b_is_root = true; // aka is first beautify call
 bool b_dont_append_do = false;
 
@@ -324,12 +325,15 @@ std::string beautify(AstNode* node) {
         };
     } else if (AstStat* stat = node->asStat()) {
         Injection injection = inject_callback ? inject_callback(stat, b_is_root) : INJECTION_NONE;
+        bool skip = skip_count == 0 || injection.skip;
 
-        if (injection.skip || injection.replace) {
+        if (skip_count >= 0) skip_count--;
+
+        if (skip || injection.replace) {
             if (b_is_root)
                 b_is_root = false;
 
-            if (injection.skip)
+            if (skip)
                 return "";
 
             return injection.replace.value();
@@ -370,9 +374,47 @@ std::string beautify(AstNode* node) {
             result.append(beautify(stat_if->condition));
             result.append(" then\n");
 
+            AstStatIf* if_break_simplify = nullptr;
+            if (extra1 && stat_if->thenbody->body.size > 1) {
+                if (AstStatIf* second_stat_if = stat_if->thenbody->body.data[0]->as<AstStatIf>()) {
+                    if (!second_stat_if->elsebody && second_stat_if->thenbody->body.size > 0 && second_stat_if->thenbody->body.data[second_stat_if->thenbody->body.size - 1]->is<AstStatBreak>()) {
+                        second_stat_if->thenbody->body.size--; // this is probably a memory violation idrk
+
+                        if_break_simplify = second_stat_if;
+                    }
+                }
+            }
+
             indent++;
-            b_dont_append_do = true;
-            result.append(beautify(stat_if->thenbody));
+            if (if_break_simplify) {
+                addIndents;
+
+                result.append("if ")
+                    .append(beautify(if_break_simplify->condition))
+                    .append(" then\n");
+
+                indent++;
+                b_dont_append_do = true;
+                result.append(beautify(if_break_simplify->thenbody));
+                indent--;
+
+                addIndents;
+
+                result.append("else");
+
+                indent++;
+                b_dont_append_do = true;
+                skip_count = 1;
+                result.append(beautify(stat_if->thenbody));
+                indent--;
+
+                addIndents;
+
+                result.append("end;");
+            } else {
+                b_dont_append_do = true;
+                result.append(beautify(stat_if->thenbody));
+            }
             indent--;
 
             if (stat_if->elsebody) {
