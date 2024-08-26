@@ -175,14 +175,15 @@ class DummyForLoopVisitor : public AstVisitor {
             success = false;
         return true;
     }
+    bool visit(AstStatContinue* stat_continue) override {
+        success = false;
+        return true;
+    }
     bool visit(AstStatFor* stat_for) override {
-        if (first_run)
-            if (stat_for->body->body.size > 0) {
-                for (AstStat* stat : stat_for->body->body) {
-                    if (stat->is<AstStatBreak>())
-                        success = true;
-                }
-            }
+        if (first_run) {
+            if (stat_for->body->body.size > 0 && stat_for->body->body.data[stat_for->body->body.size - 1]->is<AstStatBreak>())
+                success = true;
+        }
         first_run = false;
         return true;
     }
