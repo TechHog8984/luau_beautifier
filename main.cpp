@@ -13,7 +13,7 @@ int displayHelp(char* path) {
     printf("  --minify: switches output mode from beautify to minify\n");
     printf("  --nosolve: doesn't solve simple expressions\n");
     printf("  --replaceifelseexpr: tries to replace if else expressions with statements\n");
-    printf("  --extra1: tries to replace potentially more dangerous statements / expression\n");
+    printf("  --extra1: tries to replace certain statements / expression using potentially dangerous methods\n");
 
     return 0;
 };
