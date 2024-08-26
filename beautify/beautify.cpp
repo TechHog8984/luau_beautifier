@@ -4,6 +4,7 @@
 
 #include <cstring>
 #include <string>
+#include <vector>
 
 #include "math.h"
 
@@ -147,6 +148,45 @@ void dontAppendDo() {
 
 bool replace_if_expressions;
 void replaceIfElse(std::string* out, AstExprIfElse* expr, std::string var, bool use_local = false);
+
+/*
+    obfuscators commonly employ techniques to make control flow hard to read
+    one of these is a for loop with a break at the end and no continue
+    example:
+    for i = 1, 10 do
+        // code here
+        break
+    end
+    this can be simpilfied to just
+    // code here
+
+    to detect these loops we take advantage of AstVisitors
+*/
+class DummyForLoopVisitor : public AstVisitor {
+    bool first_run = true;
+
+    public:
+    const char* var = nullptr;
+    bool success = false;
+    DummyForLoopVisitor() {}
+
+    bool visit(AstExprLocal* expr_local) override {
+        if (strcmp(var, expr_local->local->name.value) == 0)
+            success = false;
+        return true;
+    }
+    bool visit(AstStatFor* stat_for) override {
+        if (first_run)
+            if (stat_for->body->body.size > 0) {
+                for (AstStat* stat : stat_for->body->body) {
+                    if (stat->is<AstStatBreak>())
+                        success = true;
+                }
+            }
+        first_run = false;
+        return true;
+    }
+};
 
 std::string beautify(AstNode* node) {
     std::string result = "";
@@ -418,27 +458,38 @@ std::string beautify(AstNode* node) {
                 result.append(";");
             };
         } else if (AstStatFor* stat_for = stat->as<AstStatFor>()) {
+            DummyForLoopVisitor* visitor = new DummyForLoopVisitor();
+            visitor->var = stat_for->var->name.value;
+
+            stat_for->visit(visitor);
+
             addIndents;
-            result.append("for ");
-            result.append(beautify(stat_for->var));
-            result.append(" = ");
-            result.append(beautify(stat_for->from));
-            result.append(", ");
-            result.append(beautify(stat_for->to));
-            if (stat_for->step) {
+            if (visitor->success) {
+                b_dont_append_do = true;
+                stat_for->body->body.size--; // this is probably a memory violation idrk
+                result.append(beautify(stat_for->body));
+            } else {
+                result.append("for ");
+                result.append(beautify(stat_for->var));
+                result.append(" = ");
+                result.append(beautify(stat_for->from));
                 result.append(", ");
-                result.append(beautify(stat_for->step));
+                result.append(beautify(stat_for->to));
+                if (stat_for->step) {
+                    result.append(", ");
+                    result.append(beautify(stat_for->step));
+                };
+
+                result.append(" do\n");
+
+                indent++;
+                b_dont_append_do = true;
+                result.append(beautify(stat_for->body));
+                indent--;
+
+                optionalNewline;
+                result.append("end;");
             };
-
-            result.append(" do\n");
-
-            indent++;
-            b_dont_append_do = true;
-            result.append(beautify(stat_for->body));
-            indent--;
-
-            optionalNewline;
-            result.append("end;");
         } else if (AstStatForIn* stat_for_in = stat->as<AstStatForIn>()) {
             addIndents;
             result.append("for ");
