@@ -31,4 +31,4 @@ Otherwise, the beautified code will appear in stdout.
 
 ## Other notes
 1. The [Luau version used](https://github.com/luau-lang/luau/releases/tag/0.630) is 0.630
-2. Currently there is no type support
+2. Currently there is no MINIMAL support
