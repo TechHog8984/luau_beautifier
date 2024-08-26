@@ -464,12 +464,13 @@ std::string beautify(AstNode* node) {
 
             stat_for->visit(visitor);
 
-            addIndents;
             if (visitor->success) {
                 b_dont_append_do = true;
                 stat_for->body->body.size--; // this is probably a memory violation idrk
                 result.append(beautify(stat_for->body));
+                optionalNewline;
             } else {
+                addIndents;
                 result.append("for ");
                 result.append(beautify(stat_for->var));
                 result.append(" = ");
