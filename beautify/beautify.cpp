@@ -147,6 +147,8 @@ void dontAppendDo() {
 };
 
 bool replace_if_expressions;
+bool extra1;
+
 void replaceIfElse(std::string* out, AstExprIfElse* expr, std::string var, bool use_local = false);
 
 /*
@@ -462,7 +464,8 @@ std::string beautify(AstNode* node) {
             DummyForLoopVisitor* visitor = new DummyForLoopVisitor();
             visitor->var = stat_for->var->name.value;
 
-            stat_for->visit(visitor);
+            if (extra1)
+                stat_for->visit(visitor);
 
             if (visitor->success) {
                 b_dont_append_do = true;
@@ -630,8 +633,9 @@ void replaceIfElse(std::string* out, AstExprIfElse* expr, std::string var, bool 
 };
 
 
-std::string beautifyRoot(AstStatBlock* root, bool nosolve_in, bool replace_if_expressions_in) {
+std::string beautifyRoot(AstStatBlock* root, bool nosolve_in, bool replace_if_expressions_in, bool extra1_in) {
     replace_if_expressions = replace_if_expressions_in;
+    extra1 = extra1_in;
     setNoSolve(nosolve_in);
     return beautify(root);
 };

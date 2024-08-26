@@ -51,4 +51,4 @@ void setupInjectCallback(InjectCallback);
 void dontAppendDo();
 
 std::string fixString(Luau::AstArray<char> value);
-std::string beautifyRoot(Luau::AstStatBlock* root, bool nosolve, bool replace_if_expressions);
+std::string beautifyRoot(Luau::AstStatBlock* root, bool nosolve, bool replace_if_expressions, bool extra1);

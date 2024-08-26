@@ -13,11 +13,12 @@ int displayHelp(char* path) {
     printf("  --minify: switches output mode from beautify to minify\n");
     printf("  --nosolve: doesn't solve simple expressions\n");
     printf("  --replaceifelseexpr: tries to replace if else expressions with statements\n");
+    printf("  --extra1: tries to replace potentially more dangerous statements / expression\n");
 
     return 0;
 };
 
-int parseArgs(int* argc, char** argv, char** filepath, bool* minify, bool* nosolve, bool* replace_if_expressions) {
+int parseArgs(int* argc, char** argv, char** filepath, bool* minify, bool* nosolve, bool* replace_if_expressions, bool* extra1) {
     bool found_file = false;
 
     for (int i = 1; i < *argc; i++) {
@@ -29,6 +30,8 @@ int parseArgs(int* argc, char** argv, char** filepath, bool* minify, bool* nosol
                 *nosolve = true;
             else if (strcmp(argv[i], "replaceifelseexpr") == 0)
                 *replace_if_expressions = true;
+            else if (strcmp(argv[i], "extra1") == 0)
+                *extra1 = true;
             else {
                 fprintf(stderr, "Error: unrecognized option '%s'\n\n", (char*) argv[i] - 2);
                 return 1;
@@ -59,8 +62,9 @@ int main(int argc, char** argv) {
     bool minify;
     bool nosolve;
     bool replace_if_expressions;
+    bool extra1;
 
-    if (parseArgs(&argc, argv, &filepath, &minify, &nosolve, &replace_if_expressions)) {
+    if (parseArgs(&argc, argv, &filepath, &minify, &nosolve, &replace_if_expressions, &extra1)) {
         return displayHelp(argv[0]);
     };
 
@@ -71,7 +75,7 @@ int main(int argc, char** argv) {
         return 1;
     };
 
-    printf("%s", handleSource(source.value(), minify, nosolve, replace_if_expressions).c_str());
+    printf("%s", handleSource(source.value(), minify, nosolve, replace_if_expressions, extra1).c_str());
 
     return 0;
 }
