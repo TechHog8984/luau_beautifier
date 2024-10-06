@@ -59,10 +59,10 @@ int main(int argc, char** argv) {
 
     char* filepath;
 
-    bool minify;
-    bool nosolve;
-    bool replace_if_expressions;
-    bool extra1;
+    bool minify = false;
+    bool nosolve = false;
+    bool replace_if_expressions = false;
+    bool extra1 = false;
 
     if (parseArgs(&argc, argv, &filepath, &minify, &nosolve, &replace_if_expressions, &extra1)) {
         return displayHelp(argv[0]);
