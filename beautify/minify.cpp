@@ -10,6 +10,19 @@
 if (!isSpace(result[result.length() - 1]) && result[result.length() - 1] != ';') \
     result.append(" ")
 
+#define minifyFunction(expr_function) \
+    tuple(expr_function->args, AstLocal); \
+    if (expr_function->vararg) { \
+        result.erase(result.size() - 1, 1); \
+        if (expr_function->args.size > 0) \
+            result.append(","); \
+        result.append("...)"); \
+    }; \
+    m_dont_append_do = true; \
+    result.append(minify(expr_function->body)); \
+    optionalSpace; \
+    result.append("end")
+
 std::string minify(AstLocal* local) {
     return local->name.value;
 };
@@ -57,19 +70,7 @@ std::string minify(Luau::AstNode* node) {
             result.append("]");
         } else if (AstExprFunction* expr_function = expr->as<AstExprFunction>()) {
             result = "function";
-            tuple(expr_function->args, AstLocal);
-            if (expr_function->vararg) {
-                result.erase(result.size() - 1, 1);
-                if (expr_function->args.size > 0)
-                    result.append(",");
-                result.append("...)");
-            };
-
-            m_dont_append_do = true;
-            result.append(minify(expr_function->body));
-
-            optionalSpace;
-            result.append("end");
+            minifyFunction(expr_function);
         } else if (AstExprTable* expr_table = expr->as<AstExprTable>()) {
             size_t size = expr_table->items.size;
             if (size > 0) {
@@ -279,10 +280,9 @@ std::string minify(Luau::AstNode* node) {
             result.append(minify(stat_function->func));
             result.append(";");
         } else if (AstStatLocalFunction* stat_local_function = stat->as<AstStatLocalFunction>()) {
-            result.append("local ");
+            result.append("local function ");
             result.append(minify(stat_local_function->name));
-            result.append("=");
-            result.append(minify(stat_local_function->func));
+            minifyFunction(stat_local_function->func);
             result.append(";");
         } else {
             result.append("--[[ error: unknown stat type! ]]");
