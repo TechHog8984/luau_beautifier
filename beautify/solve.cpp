@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstring>
+#include <optional>
 #include "solve.hpp"
 
 #include "Luau/Ast.h"
@@ -76,6 +77,60 @@ double solveBinary(AstExprBinary::Op op, double left, double right) {
     };
 };
 
+typedef struct {
+    AstExprBinary::Op op;
+    size_t length;
+    double number;
+} InlineNumberThroughStringLenFunctionResult;
+
+std::optional<InlineNumberThroughStringLenFunctionResult> testInlineNumberThroughStringLenFunction(AstExpr* expr) {
+    auto expr_call = getRootExpr(expr)->as<AstExprCall>();
+    if (!expr_call || expr_call->args.size != 1)
+        return std::nullopt;
+
+    auto expr_function = getRootExpr(expr_call->func)->as<AstExprFunction>();
+    if (!expr_function || expr_function->body->body.size != 1
+        || expr_function->args.size != 1)
+        return std::nullopt;
+
+    auto stat_return = expr_function->body->body.data[0]->as<AstStatReturn>();
+    if (!stat_return || stat_return->list.size != 1)
+        return std::nullopt;
+
+    auto expr_binary = getRootExpr(stat_return->list.data[0])->as<AstExprBinary>();
+    if (!expr_binary || !isSolvable(expr_binary->right)
+        || !isBinaryMath(expr_binary))
+        return std::nullopt;
+
+    Solved binary_right = solve(expr_binary->right);
+    if (binary_right.type != Solved::Number)
+        return std::nullopt;
+
+    auto left = getRootExpr(expr_binary->left)->as<AstExprUnary>();
+    if (left->op != AstExprUnary::Len)
+        return std::nullopt;
+
+    auto unary_expr = getRootExpr(left->expr)->as<AstExprLocal>();
+    if (!unary_expr)
+        return std::nullopt;
+
+    auto arg_passed = getRootExpr(expr_call->args.data[0])->as<AstExprConstantString>();
+    if (!arg_passed)
+        return std::nullopt;
+
+    auto arg_received = expr_function->args.data[0];
+    if (strcmp(arg_received->name.value, unary_expr->local->name.value) == 0) {
+        InlineNumberThroughStringLenFunctionResult result {
+            .op = expr_binary->op,
+            .length = strlen(arg_passed->value.data),
+            .number = binary_right.number_result
+        };
+        return result;
+    }
+
+    return std::nullopt;
+}
+
 SolveResultType getSolveResultType(AstExpr* expr) {
     SolveResultType result = None;
     if (AstExprUnary* expr_unary = expr->as<AstExprUnary>()) {
@@ -124,28 +179,8 @@ SolveResultType getSolveResultType(AstExpr* expr) {
     else if (getRootExpr(expr)->is<AstExprConstantString>())
         result = String;
     // (function(A) return (#A - 9) end)("some string")
-    else if (AstExprCall* expr_call = getRootExpr(expr)->as<AstExprCall>()) // ?expr?(?expr?,)
-        if (AstExprFunction* expr_function = getRootExpr(expr_call->func)->as<AstExprFunction>()) // (function(?local?,) ?stat?, end)(?expr?,)
-            if (expr_function->body->body.size == 1) // (function(?local?,) ?stat? end)(?expr?,)
-                if (AstStatReturn* stat_return = expr_function->body->body.data[0]->as<AstStatReturn>()) // (function(?local?,) return ?expr?, end)(?expr?,)
-                    if (stat_return->list.size == 1) // (function(?local?,) return ?expr? end)(?expr?,)
-                        if (AstExprBinary* expr_binary = getRootExpr(stat_return->list.data[0])->as<AstExprBinary>()) // (function(?local?,) return ?exprbinary? end)(?expr?,)
-                            if (isSolvable(expr_binary->right) && isBinaryMath(expr_binary)) {
-                                Solved binary_right = solve(expr_binary->right);
-                                if (binary_right.type == Solved::Type::Number) // (function(?local?,) return ?exprunary? ?op? ?number? end)(?expr?,)
-                                    if (AstExprUnary* left = getRootExpr(expr_binary->left)->as<AstExprUnary>()) // (function(?local?,) return ?exprunary? ?op? ?number? end)(?expr?,)
-                                        if (left->op == AstExprUnary::Op::Len) // (function(?local?,) return #?expr? ?op? ?number? end)(?expr?,)
-                                            if (AstExprLocal* unary_expr = getRootExpr(left->expr)->as<AstExprLocal>()) // (function(?local?,) return #?local? ?op? ?number? end)(?expr?,)
-                                                if (expr_call->args.size == 1) // (function(?local?,) return #?local? ?op? ?number? end)(?expr?)
-                                                    if (AstExprConstantString* arg_passed = getRootExpr(expr_call->args.data[0])->as<AstExprConstantString>()) { // (function(?local?,) return #?local? ?op? ?number? end)(?string?)
-                                                        char* arg_passed_str = arg_passed->value.data;
-                                                        if (expr_function->args.size == 1) { // (function(?local?) return #?local? ?op? ?number? end)(?string?)
-                                                            AstLocal* arg_received = expr_function->args.data[0];
-                                                            if (strcmp(arg_received->name.value, unary_expr->local->name.value) == 0) // (function(arg) return #arg ?op? ?number? end)(?string?)
-                                                                result = Number;
-                                                        };
-                                                    };
-                            };
+    else if (testInlineNumberThroughStringLenFunction(expr))
+        result = Number;
 
     return result;
 };
@@ -344,30 +379,10 @@ Solved solve(AstExpr* expr) {
                     break;
             };
         };
-    } else if (AstExprCall* expr_call = getRootExpr(expr)->as<AstExprCall>()) // ?expr?(?expr?,)
-        if (AstExprFunction* expr_function = getRootExpr(expr_call->func)->as<AstExprFunction>()) // (function(?local?,) ?stat?, end)(?expr?,)
-            if (expr_function->body->body.size == 1) // (function(?local?,) ?stat? end)(?expr?,)
-                if (AstStatReturn* stat_return = expr_function->body->body.data[0]->as<AstStatReturn>()) // (function(?local?,) return ?expr?, end)(?expr?,)
-                    if (stat_return->list.size == 1) // (function(?local?,) return ?expr? end)(?expr?,)
-                        if (AstExprBinary* expr_binary = getRootExpr(stat_return->list.data[0])->as<AstExprBinary>()) // (function(?local?,) return ?exprbinary? end)(?expr?,)
-                            if (isSolvable(expr_binary->right) && isBinaryMath(expr_binary)) {
-                                Solved binary_right = solve(expr_binary->right);
-                                if (binary_right.type == Solved::Type::Number) // (function(?local?,) return ?exprunary? ?op? ?number? end)(?expr?,)
-                                    if (AstExprUnary* left = getRootExpr(expr_binary->left)->as<AstExprUnary>()) // (function(?local?,) return ?exprunary? ?op? ?number? end)(?expr?,)
-                                        if (left->op == AstExprUnary::Op::Len) // (function(?local?,) return #?expr? ?op? ?number? end)(?expr?,)
-                                            if (AstExprLocal* unary_expr = getRootExpr(left->expr)->as<AstExprLocal>()) // (function(?local?,) return #?local? ?op? ?number? end)(?expr?,)
-                                                if (expr_call->args.size == 1) // (function(?local?,) return #?local? ?op? ?number? end)(?expr?)
-                                                    if (AstExprConstantString* arg_passed = getRootExpr(expr_call->args.data[0])->as<AstExprConstantString>()) { // (function(?local?,) return #?local? ?op? ?number? end)(?string?)
-                                                        char* arg_passed_str = arg_passed->value.data;
-                                                        if (expr_function->args.size == 1) { // (function(?local?) return #?local? ?op? ?number? end)(?string?)
-                                                            AstLocal* arg_received = expr_function->args.data[0];
-                                                            if (strcmp(arg_received->name.value, unary_expr->local->name.value) == 0) { // (function(arg) return #arg ?op? ?number? end)(?string?)
-                                                                result.type = Solved::Type::Number;
-                                                                result.number_result = solveBinary(expr_binary->op, strlen(arg_passed_str), binary_right.number_result);
-                                                            };
-                                                        };
-                                                    };
-                            };
+    } else if (auto constant_wrap = testInlineNumberThroughStringLenFunction(expr)) {
+        result.type = Solved::Type::Number;
+        result.number_result = solveBinary(constant_wrap->op, constant_wrap->length, constant_wrap->number);
+    }
 
     return result;
 };
