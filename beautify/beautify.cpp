@@ -14,14 +14,20 @@ using namespace Luau;
 
 #define convert beautify
 
-#define addIndents \
-if (skip_first_indent) indent--; \
-for (int _ = 0; _ < indent; _++) { \
-    result.append("    "); \
-}; \
-if (skip_first_indent) { \
-    indent++; \
-    skip_first_indent = false; \
+#define addIndents { \
+    int old_indent = indent; \
+    if (skip_first_indent) indent--; \
+    else if (b_ignore_indent) indent = 0; \
+    for (int _ = 0; _ < indent; _++) { \
+        result.append("    "); \
+    }; \
+    if (skip_first_indent) { \
+        indent++; \
+        skip_first_indent = false; \
+    } else if (b_ignore_indent) { \
+        indent = old_indent; \
+        b_ignore_indent = false; \
+    } \
 }
 
 #define optionalNewlinePre \
@@ -127,6 +133,8 @@ bool skip_first_indent = false;
 int skip_count = -1;
 bool b_is_root = true; // aka is first beautify call
 bool b_dont_append_do = false;
+bool b_ignore_indent = false;
+bool b_dont_append_end = false;
 
 std::string getIndents(int offset) {
     std::string result = "";
@@ -369,6 +377,9 @@ std::string beautify(AstNode* node) {
                 result.append("end;");
             };
         } else if (AstStatIf* stat_if = stat->as<AstStatIf>()) {
+            bool dont_append_end = b_dont_append_end;
+            b_dont_append_end = false;
+
             addIndents;
             result.append("if ");
             result.append(beautify(stat_if->condition));
@@ -419,15 +430,27 @@ std::string beautify(AstNode* node) {
 
             if (stat_if->elsebody) {
                 optionalNewline;
-                result.append("else\n");
-                indent++;
+                result.append("else");
+
+                bool is_if = stat_if->elsebody->is<AstStatIf>();
+                if (is_if) {
+                    b_ignore_indent = true;
+                    b_dont_append_end = true;
+                } else {
+                    indent++;
+                    result += '\n';
+                }
+
                 b_dont_append_do = true;
                 result.append(beautify(stat_if->elsebody));
-                indent--;
+                if (!is_if)
+                    indent--;
             }
 
-            optionalNewline;
-            result.append("end;");
+            if (!dont_append_end) {
+                optionalNewline;
+                result.append("end;");
+            }
         } else if (AstStatWhile* stat_while = stat->as<AstStatWhile>()) {
             addIndents;
             result.append("while ");
