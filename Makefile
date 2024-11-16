@@ -6,8 +6,8 @@ CONFIG_SOURCES=Luau/Config/src/*.cpp
 LUAU_SOURCES=$(ANALYSIS_SOURCES) $(AST_SOURCES) $(CLI_SOURCES) $(CONFIG_SOURCES)
 LUAU_INCLUDE=-ILuau/Analysis/include -ILuau/Ast/include -ILuau/CLI -ILuau/Common/include -ILuau/Config/include
 
-LUAU_SOURCES_BUILD=$(shell echo "$(LUAU_SOURCES)" | sed 's/Luau\//..\/Luau\//g' -)
-LUAU_INCLUDE_BUILD=$(shell echo "$(LUAU_INCLUDE)" | sed 's/Luau\//..\/Luau\//g' -)
+LUAU_SOURCES_BUILD=$(subst Luau,../Luau,$(LUAU_SOURCES))
+LUAU_INCLUDE_BUILD=$(subst Luau,../Luau,$(LUAU_INCLUDE))
 
 build:
 	if [ ! -d "luau_build" ]; then \
