@@ -200,6 +200,147 @@ class DummyForLoopVisitor : public AstVisitor {
     }
 };
 
+struct StatementExtractionResult {
+    const char* counter_name = nullptr;
+    // AstArray<AstStat*> list; // copy on a TempVector
+
+    struct Branch {
+        bool is_end = false;
+        double target;
+        double condition;
+    };
+    std::vector<Branch> branch_list;
+};
+
+bool testBinaryWithVariable(AstExprBinary* expr, const char* variable, double num) {
+    bool num_is_left = false;
+
+    // AstExpr* variable_expr = nullptr;
+    AstExprConstantNumber* num_expr = nullptr;
+
+    if (AstExprLocal* left_local = getRootExpr(expr->left)->as<AstExprLocal>()) {
+        if (strcmp(variable, left_local->local->name.value) != 0)
+            return false;
+        // else
+        //     variable_expr = left_local;
+    } else if (AstExprLocal* right_local = getRootExpr(expr->right)->as<AstExprLocal>()) {
+        if (strcmp(variable, right_local->local->name.value) != 0)
+            return false;
+        // else
+        //     variable_expr = right_local;
+    }
+
+    if (AstExprConstantNumber* left_number = getRootExpr(expr->left)->as<AstExprConstantNumber>()) {
+        num_expr = left_number;
+        num_is_left = true;
+    } else if (AstExprConstantNumber* right_number = getRootExpr(expr->left)->as<AstExprConstantNumber>()) {
+        num_expr = right_number;
+    }
+
+    double expr_num = num_expr->value;
+
+    switch (expr->op) {
+        case AstExprBinary::CompareNe: {
+            return num != expr_num;
+        }
+        case AstExprBinary::CompareEq: {
+            return num == expr_num;
+        }
+        case AstExprBinary::CompareLt: {
+            break;
+        }
+        case AstExprBinary::CompareLe: {
+            break;
+        }
+        case AstExprBinary::CompareGt: {
+            break;
+        }
+        case AstExprBinary::CompareGe: {
+            break;
+        }
+        default:
+            break;
+    }
+
+    return false;
+}
+
+void handleStatementExtractionIf(AstStatIf* stat, StatementExtractionResult& result, double num) {
+    auto then_body = stat->thenbody->body;
+
+    AstStat* else_body = stat->elsebody;
+    if (else_body) {
+        if (AstStatIf* inner = else_body->as<AstStatIf>())
+            handleStatementExtractionIf(inner, result, num);
+    }
+
+    if (then_body.size < 1)
+        return;
+
+    if (then_body.size == 1)
+        if (AstStatIf* inner = then_body.data[0]->as<AstStatIf>())
+            return handleStatementExtractionIf(inner, result, num);
+
+    AstExprBinary* condition = getRootExpr(stat->condition)->as<AstExprBinary>();
+    if (!condition)
+        return;
+
+    StatementExtractionResult::Branch branch;
+    if (testBinaryWithVariable(condition, result.counter_name, num)) {
+        branch.condition = num;
+        // branch.target = ;
+    }
+
+    bool is_end = false;
+    AstStat* last_stat = then_body.data[then_body.size - 1];
+    if (last_stat->is<AstStatBreak>())
+        is_end = true;
+
+    branch.is_end = is_end;
+
+    result.branch_list.push_back(branch);
+}
+
+bool attemptStatementExtraction(AstStatBlock* block) {
+    auto block_body = block->body;
+    if (block_body.size < 2) {
+        return false;
+    }
+
+    const char* counter_name = nullptr;
+    double counter_initial;
+
+    AstStat* first_stat = block_body.data[0];
+    if (AstStatLocal* first_stat = first_stat->as<AstStatLocal>()) {
+        auto vars = first_stat->vars;
+        auto values = first_stat->values;
+        if (values.size > 0)
+            if (AstExprConstantNumber* expr_number = getRootExpr(values.data[0])->as<AstExprConstantNumber>()) {
+                counter_name = vars.data[0]->name.value;
+                counter_initial = expr_number->value;
+            }
+    }
+
+    if (counter_name == nullptr)
+        return false;
+
+    StatementExtractionResult result;
+    result.counter_name = counter_name;
+
+    AstStat* second_stat = block_body.data[1];
+    if (AstStatWhile* second_stat = second_stat->as<AstStatWhile>()) {
+        auto second_body = second_stat->body->body;
+        if (second_body.size > 0)
+            if (AstStatIf* third_stat = second_body.data[0]->as<AstStatIf>()) {
+                handleStatementExtractionIf(third_stat, result, counter_initial);
+            }
+    }
+
+    printf("count: %zu\n", result.branch_list.size());
+
+    return false;
+}
+
 std::string beautify(AstNode* node) {
     std::string result = "";
 

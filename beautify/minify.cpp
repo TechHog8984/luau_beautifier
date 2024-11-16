@@ -27,6 +27,20 @@ std::string minify(AstLocal* local) {
     return local->name.value;
 };
 
+
+#ifdef listBody
+    #undef listBody
+#endif
+
+#define listBody(array, type) \
+for (type* obj : array) { \
+    list_index++; \
+    result.append(convert(obj)); \
+    if (list_index < list_size) { \
+        result += ','; \
+    }; \
+}
+
 bool m_is_root = true; // aka is first minify call
 bool m_dont_append_do = false;
 
@@ -117,9 +131,9 @@ std::string minify(Luau::AstNode* node) {
                 appendSolve(expr_binary, minify);
             } else {
                 result.append(minify(expr_binary->left));
-                result.append(" ");
+                // result.append(" ");
                 result.append(binary_operators[expr_binary->op]);
-                result.append(" ");
+                // result.append(" ");
                 result.append(minify(expr_binary->right));
             }
         } else if (AstExprIfElse* expr_if_else = expr->as<AstExprIfElse>()) {
@@ -269,7 +283,7 @@ std::string minify(Luau::AstNode* node) {
             result.append(";");
         } else if (AstStatCompoundAssign* stat_compound_assign = stat->as<AstStatCompoundAssign>()) {
             result.append(minify(stat_compound_assign->var));
-            result.append(" ");
+            // result.append(" ");
             result.append(binary_operators[stat_compound_assign->op]);
             result.append("=");
             result.append(minify(stat_compound_assign->value));
