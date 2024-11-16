@@ -248,10 +248,10 @@ std::string minify(Luau::AstNode* node) {
             result.append(minify(stat_for->var));
             result.append("=");
             result.append(minify(stat_for->from));
-            result.append(", ");
+            result += ',';
             result.append(minify(stat_for->to));
             if (stat_for->step) {
-                result.append(", ");
+                result += ',';
                 result.append(minify(stat_for->step));
             };
 
