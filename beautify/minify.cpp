@@ -1,4 +1,5 @@
 #include "minify.hpp"
+#include "Luau/Ast.h"
 #include "beautify.hpp"
 #include "solve.hpp"
 
@@ -130,10 +131,11 @@ std::string minify(Luau::AstNode* node) {
             if (isSolvable(expr_binary)) {
                 appendSolve(expr_binary, minify);
             } else {
+                const char* space = (expr_binary->op == AstExprBinary::And || expr_binary->op == AstExprBinary::Or) ? " " : "";
                 result.append(minify(expr_binary->left));
-                // result.append(" ");
+                result.append(space);
                 result.append(binary_operators[expr_binary->op]);
-                // result.append(" ");
+                result.append(space);
                 result.append(minify(expr_binary->right));
             }
         } else if (AstExprIfElse* expr_if_else = expr->as<AstExprIfElse>()) {
