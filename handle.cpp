@@ -15,14 +15,22 @@
 #endif
 
 // left here for demonstration purposes
+// struct Data {
+//     int a = 100;
+// };
 // InjectCallback comment_callback;
-// Injection comment_callback(Luau::AstStat* stat, bool is_root) {
+// Injection comment_callback(Luau::AstStat* stat, bool is_root, void* d) {
+//     Data* data = (Data*) d;
 //     if (stat->is<Luau::AstStatExpr>())
 //         return { .skip = true };
 //     else if (!is_root && stat->is<Luau::AstStatBlock>()) {
 //         std::string append = getIndents();
 //         append.append("-- ^ this is a block\n");
-//         return { .prepend = "-- this is a block\n", .append = append };
+//         return {
+//             .prepend = std::string("-- this is a block, data is ")
+//                 .append(std::to_string(data->a)) += '\n',
+//             .append = append
+//         };
 //     };
 
 //     return {};
@@ -52,7 +60,9 @@ std::string handleSource(std::string source, bool minify, bool nosolve, bool rep
     Luau::AstStatBlock* root = parse_result.root;
 
     // left here for demonstration purposes
-    // setupInjectCallback(comment_callback);
+    // Data d;
+    // d.a += 10;
+    // setupInjectCallback(comment_callback, &d);
 
     if (minify)
         return minifyRoot(root, nosolve);

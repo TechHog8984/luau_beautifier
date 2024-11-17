@@ -46,8 +46,8 @@ struct Injection {
     bool skip;
 };
 
-typedef Injection InjectCallback(Luau::AstStat* stat, bool is_root);
-void setupInjectCallback(InjectCallback);
+typedef Injection InjectCallback(Luau::AstStat* stat, bool is_root, void* data);
+void setupInjectCallback(InjectCallback, void* data = nullptr);
 void dontAppendDo();
 
 std::string fixString(Luau::AstArray<char> value);

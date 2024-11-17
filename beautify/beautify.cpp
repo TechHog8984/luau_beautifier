@@ -147,9 +147,11 @@ std::string getIndents(int offset) {
 };
 
 InjectCallback* inject_callback;
+void* inject_callback_data;
 
-void setupInjectCallback(InjectCallback* callback) {
+void setupInjectCallback(InjectCallback* callback, void* data) {
     inject_callback = callback;
+    inject_callback_data = data;
 };
 
 void dontAppendDo() {
@@ -488,7 +490,7 @@ std::string beautify(AstNode* node) {
             result.append("--[[ error: unknown expression type ").append(std::to_string(expr->classIndex)).append("! ]]");
         };
     } else if (AstStat* stat = node->asStat()) {
-        Injection injection = inject_callback ? inject_callback(stat, b_is_root) : INJECTION_NONE;
+        Injection injection = inject_callback ? inject_callback(stat, b_is_root, inject_callback_data) : INJECTION_NONE;
         bool skip = skip_count == 0 || injection.skip;
 
         if (skip_count >= 0) skip_count--;
