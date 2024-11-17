@@ -24,7 +24,9 @@ You can use luau_beautifier without compiling with [this replit](https://replit.
 > <br></br>
 > options:<br>
 > &nbsp;&nbsp;--minify: switches output mode from beautify to minify<br>
-> &nbsp;&nbsp;--nosolve: doesn't solve simple expressions
+> &nbsp;&nbsp;--nosolve: doesn't solve simple expressions<br>
+> &nbsp;&nbsp;--replaceifelseexpr: tries to replace if else expressions with statements<br>
+> &nbsp;&nbsp;--extra1: tries to replace certain statements / expression using potentially dangerous methods
 
 If there are errors parsing (both CLI options or the input code), you will see those in stderr.<br>
 Otherwise, the beautified code will appear in stdout.
