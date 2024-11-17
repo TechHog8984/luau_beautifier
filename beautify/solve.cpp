@@ -18,6 +18,7 @@ AstExpr* getRootExpr(AstExpr* expr) {
     return expr;
 };
 
+// NOTE: if we add function to this list, beautify on AstExprGroup will need to be adjusted
 enum SolveResultType {
     None,
     Bool,
@@ -76,6 +77,72 @@ double solveBinary(AstExprBinary::Op op, double left, double right) {
             exit(1);
     };
 };
+
+std::optional<size_t> getListSize(std::vector<AstExpr*> list) {
+    size_t result = 0;
+
+    for (auto value : list) {
+        value = getRootExpr(value);
+        if (isConstant(value)) {
+            if (!value->is<AstExprConstantNil>())
+                result++;
+            continue;
+        }
+
+        if (auto value_call = value->as<AstExprCall>()) {
+            if (auto func = getRootExpr(value_call->func)->as<AstExprFunction>()) {
+                auto body = func->body->body;
+                // we need to ensure that there is only one return
+                // this could easily be improved using a visitor that looks for return stats
+                if (body.size != 1)
+                    return std::nullopt;
+
+                auto return_stat = body.data[0]->as<AstStatReturn>();
+
+                std::vector<AstExpr*> list;
+
+                bool vararg = func->args.size == 0 && func->vararg;
+                auto return_list = return_stat->list;
+                auto return_count = return_list.size;
+                if (return_count == 0)
+                    continue;
+
+                for (unsigned index = 0; index < return_count; index++)
+                    list.push_back(return_list.data[index]);
+
+                if (auto last = getRootExpr(list.back())->as<AstExprVarargs>()) {
+                    list.pop_back();
+                    for (auto arg : value_call->args)
+                        list.push_back(arg);
+                }
+
+                std::optional<size_t> size = getListSize(list);
+                if (size.has_value()) {
+                    result += size.value();
+                    continue;
+                }
+            }
+        }
+
+        return std::nullopt;
+    }
+
+    return result;
+}
+std::optional<size_t> getTableSize(AstExprTable* table) {
+    std::vector<AstExpr*> list;
+
+    auto items = table->items;
+    for (unsigned index = 0; index < items.size; index++) {
+        auto item = items.data[index];
+        if (item.kind != AstExprTable::Item::List)
+            return std::nullopt;
+
+        list.push_back(item.value);
+    }
+
+    return getListSize(list);
+}
 
 typedef struct {
     AstExprBinary::Op op;
@@ -144,8 +211,14 @@ SolveResultType getSolveResultType(AstExpr* expr) {
                     result = Number;
                 break;
             case AstExprUnary::Op::Len:
-                if (isConstantString(expr_unary->expr) || isConstantTable(expr_unary->expr))
+                if (isConstantString(expr_unary->expr)) {
                     result = Number;
+                } else if (isConstantTable(expr_unary->expr)) {
+                    auto table = getRootExpr(expr_unary->expr)->as<AstExprTable>();
+                    std::optional<size_t> size = getTableSize(table);
+                    if (size.has_value())
+                        result = Number;
+                }
                 break;
             default:
                 break;
@@ -252,7 +325,12 @@ Solved solve(AstExpr* expr) {
                     result.number_result = solve(expr_unary->expr).expression_result->as<AstExprConstantString>()->value.size;
                 } else if (isConstantTable(expr_unary->expr)) {
                     result.type = Solved::Type::Number;
-                    result.number_result = getRootExpr(expr_unary->expr)->as<AstExprTable>()->items.size;
+
+                    auto table = getRootExpr(expr_unary->expr)->as<AstExprTable>();
+                    std::optional<size_t> size = getTableSize(table);
+                    assert(size.has_value());
+
+                    result.number_result = size.value();
                 };
 
                 break;
