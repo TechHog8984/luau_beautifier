@@ -200,6 +200,9 @@ std::optional<InlineNumberThroughStringLenFunctionResult> testInlineNumberThroug
 
 SolveResultType getSolveResultType(AstExpr* expr) {
     SolveResultType result = None;
+    if (nosolve)
+        return result;
+
     if (AstExprUnary* expr_unary = expr->as<AstExprUnary>()) {
         switch (expr_unary->op) {
             case AstExprUnary::Op::Not:
