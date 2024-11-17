@@ -135,6 +135,7 @@ bool b_is_root = true; // aka is first beautify call
 bool b_dont_append_do = false;
 bool b_ignore_indent = false;
 bool b_dont_append_end = false;
+bool b_inside_group = false;
 
 std::string getIndents(int offset) {
     std::string result = "";
@@ -346,13 +347,27 @@ std::string beautify(AstNode* node) {
 
     if (AstExpr* expr = node->asExpr()) {
         if (AstExprGroup* expr_group = expr->as<AstExprGroup>()) {
-            result = '(';
-            if (isSolvable(expr_group)) {
+
+            bool parenthesis = !b_inside_group;
+
+            auto root = getRootExpr(expr_group->expr);
+            bool is_solvable = isSolvable(root);
+            if (!is_solvable && (root->is<AstExprFunction>() || root->is<AstExprBinary>()))
+                parenthesis = true;
+
+            if (parenthesis)
+                result = '(';
+
+            b_inside_group = true;
+            if (is_solvable) {
                 appendSolve(expr_group, beautify);
             } else {
                 result.append(beautify(expr_group->expr));
             };
-            result.append(")");
+            b_inside_group = false;
+
+            if (parenthesis)
+                result.append(")");
         } else if (AstExprConstantNil* expr_nil = expr->as<AstExprConstantNil>()) {
             result = "nil";
         } else if (AstExprConstantBool* expr_bool = expr->as<AstExprConstantBool>()) {
