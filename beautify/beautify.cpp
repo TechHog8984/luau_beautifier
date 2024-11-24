@@ -354,7 +354,7 @@ std::string beautify(AstNode* node) {
 
             auto root = getRootExpr(expr_group->expr);
             bool is_solvable = isSolvable(root);
-            if (!is_solvable && (root->is<AstExprFunction>() || root->is<AstExprBinary>()))
+            if (root->is<AstExprUnary>() || (!is_solvable && (root->is<AstExprFunction>() || root->is<AstExprBinary>())))
                 parenthesis = true;
 
             if (parenthesis)
