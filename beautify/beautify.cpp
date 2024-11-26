@@ -350,12 +350,14 @@ std::string beautify(AstNode* node) {
     if (AstExpr* expr = node->asExpr()) {
         if (AstExprGroup* expr_group = expr->as<AstExprGroup>()) {
 
-            bool parenthesis = !b_inside_group;
+            // TODO: redo parenthesis stuff
+            // bool parenthesis = !b_inside_group;
+            bool parenthesis = true;
 
             auto root = getRootExpr(expr_group->expr);
             bool is_solvable = isSolvable(root);
-            if (root->is<AstExprUnary>() || (!is_solvable && (root->is<AstExprFunction>() || root->is<AstExprBinary>())))
-                parenthesis = true;
+            // if (root->is<AstExprUnary>() || (!is_solvable && (root->is<AstExprFunction>() || root->is<AstExprBinary>())))
+            //     parenthesis = true;
 
             if (parenthesis)
                 result = '(';
