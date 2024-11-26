@@ -128,14 +128,14 @@ std::string beautify(AstLocal* local) {
     return local->name.value;
 };
 
-int indent = 0;
-bool skip_first_indent = false;
-int skip_count = -1;
-bool b_is_root = true; // aka is first beautify call
-bool b_dont_append_do = false;
-bool b_ignore_indent = false;
-bool b_dont_append_end = false;
-bool b_inside_group = false;
+int indent;
+bool skip_first_indent;
+int skip_count;
+bool b_is_root; // aka is first beautify call
+bool b_dont_append_do;
+bool b_ignore_indent;
+bool b_dont_append_end;
+bool b_inside_group;
 
 std::string getIndents(int offset) {
     std::string result = "";
@@ -856,6 +856,15 @@ void replaceIfElse(std::string* out, AstExprIfElse* expr, std::string var, bool 
 
 
 std::string beautifyRoot(AstStatBlock* root, bool nosolve_in, bool replace_if_expressions_in, bool extra1_in) {
+    indent = 0;
+    skip_first_indent = false;
+    skip_count = -1;
+    b_is_root = true; // aka is first beautify call
+    b_dont_append_do = false;
+    b_ignore_indent = false;
+    b_dont_append_end = false;
+    b_inside_group = false;
+
     replace_if_expressions = replace_if_expressions_in;
     extra1 = extra1_in;
     setNoSolve(nosolve_in);
