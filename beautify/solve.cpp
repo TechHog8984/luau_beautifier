@@ -231,12 +231,14 @@ std::optional<AstExpr*> testSimpleFunctionCall(AstExpr* expr) {
         return std::nullopt;
     }
 
-    auto value = list.data[0];
+    // auto value = list.data[0];
 
-    if (isConstant(value))
-        return value;
+    // if (isConstant(value))
+    //     return value;
 
-    return std::nullopt;
+    // return std::nullopt;
+
+    return list.data[0];
 }
 
 SolveResultType getSolveResultType(AstExpr* expr) {
