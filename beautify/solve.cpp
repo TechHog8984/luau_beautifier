@@ -5,8 +5,15 @@
 #include "solve.hpp"
 
 #include "Luau/Ast.h"
+#include "Luau/Lexer.h"
 
 using namespace Luau;
+
+Allocator* allocator = nullptr;
+
+void setAllocator(Luau::Allocator* allocator_in) {
+    allocator = allocator_in;
+}
 
 bool nosolve;
 
@@ -24,6 +31,7 @@ enum SolveResultType {
     Bool,
     Number,
     String,
+    Unknown
 };
 
 bool isConstant(AstExpr* expr);
@@ -198,6 +206,39 @@ std::optional<InlineNumberThroughStringLenFunctionResult> testInlineNumberThroug
     return std::nullopt;
 }
 
+std::optional<AstExpr*> testSimpleFunctionCall(AstExpr* expr) {
+    auto expr_call = getRootExpr(expr)->as<AstExprCall>();
+    if (!expr_call)
+        return std::nullopt;
+
+    auto function = getRootExpr(expr_call->func)->as<AstExprFunction>();
+    if (!function)
+        return std::nullopt;
+
+    auto body = function->body->body;
+    if (body.size != 1)
+        return std::nullopt;
+
+    auto stat_return = body.data[0]->as<AstStatReturn>();
+    if (!stat_return)
+        return std::nullopt;
+
+    auto list = stat_return->list;
+    // TODO: change the return type to a vector of expressions, and we can remove this check and loop through each
+    if (list.size != 1) {
+        if (list.size == 0 && allocator)
+            return allocator->alloc<AstExprConstantNil>(Location(Position(0, 0), 0));
+        return std::nullopt;
+    }
+
+    auto value = list.data[0];
+
+    if (isConstant(value))
+        return value;
+
+    return std::nullopt;
+}
+
 SolveResultType getSolveResultType(AstExpr* expr) {
     SolveResultType result = None;
     if (nosolve)
@@ -257,6 +298,8 @@ SolveResultType getSolveResultType(AstExpr* expr) {
     // (function(A) return (#A - 9) end)("some string")
     else if (testInlineNumberThroughStringLenFunction(expr))
         result = Number;
+    else if (testSimpleFunctionCall(expr))
+        result = Unknown;
 
     return result;
 };
@@ -463,6 +506,9 @@ Solved solve(AstExpr* expr) {
     } else if (auto constant_wrap = testInlineNumberThroughStringLenFunction(expr)) {
         result.type = Solved::Type::Number;
         result.number_result = solveBinary(constant_wrap->op, constant_wrap->length, constant_wrap->number);
+    } else if (auto simple = testSimpleFunctionCall(expr)) {
+        result.type = Solved::Expression;
+        result.expression_result = simple.value();
     }
 
     return result;

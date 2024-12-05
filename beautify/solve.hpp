@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Luau/Ast.h"
+#include "Luau/Lexer.h"
 
 using namespace Luau;
 
@@ -34,5 +35,7 @@ switch (solved.type) { \
 bool isSolvable(AstExpr* expr);
 Solved solve(AstExpr* expr);
 void setNoSolve(bool nosolve);
+
+void setAllocator(Luau::Allocator* allocator);
 
 std::string convertNumber(double value);

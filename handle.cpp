@@ -9,6 +9,7 @@
 
 #include "beautify.hpp"
 #include "minify.hpp"
+#include "solve.hpp"
 
 #if defined(__EMSCRIPTEN__)
 #include <emscripten/bind.h>
@@ -63,6 +64,8 @@ std::string handleSource(std::string source, bool minify, bool nosolve, bool rep
     // Data d;
     // d.a += 10;
     // setupInjectCallback(comment_callback, &d);
+
+    setAllocator(&allocator);
 
     if (minify)
         return minifyRoot(root, nosolve);
