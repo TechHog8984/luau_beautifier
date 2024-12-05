@@ -538,7 +538,7 @@ std::string convertNumber(double value) {
 
     if (result == "inf")
         result = "math.huge";
-    else if (result == "-nan")
+    else if (result == "nan" or result == "-nan")
         result = "(0/0)";
     else {
         while (result.length() > 2 && result[result.length() - 1] == '0')
