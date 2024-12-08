@@ -12,13 +12,14 @@ int displayHelp(char* path) {
     printf("options:\n");
     printf("  --minify: switches output mode from beautify to minify\n");
     printf("  --nosolve: doesn't solve simple expressions\n");
+    printf("  --ignoretypes: omits Luau type expressions, keeping the important parts\n");
     printf("  --replaceifelseexpr: tries to replace if else expressions with statements\n");
     printf("  --extra1: tries to replace certain statements / expression using potentially dangerous methods\n");
 
     return 0;
 };
 
-int parseArgs(int* argc, char** argv, char** filepath, bool* minify, bool* nosolve, bool* replace_if_expressions, bool* extra1) {
+int parseArgs(int* argc, char** argv, char** filepath, bool* minify, bool* nosolve, bool* ignore_types, bool* replace_if_expressions, bool* extra1) {
     bool found_file = false;
 
     for (int i = 1; i < *argc; i++) {
@@ -28,6 +29,8 @@ int parseArgs(int* argc, char** argv, char** filepath, bool* minify, bool* nosol
                 *minify = true;
             else if (strcmp(argv[i], "nosolve") == 0)
                 *nosolve = true;
+            else if (strcmp(argv[i], "ignoretypes") == 0)
+                *ignore_types = true;
             else if (strcmp(argv[i], "replaceifelseexpr") == 0)
                 *replace_if_expressions = true;
             else if (strcmp(argv[i], "extra1") == 0)
@@ -61,10 +64,11 @@ int main(int argc, char** argv) {
 
     bool minify = false;
     bool nosolve = false;
+    bool ignore_types = false;
     bool replace_if_expressions = false;
     bool extra1 = false;
 
-    if (parseArgs(&argc, argv, &filepath, &minify, &nosolve, &replace_if_expressions, &extra1)) {
+    if (parseArgs(&argc, argv, &filepath, &minify, &nosolve, &ignore_types, &replace_if_expressions, &extra1)) {
         return displayHelp(argv[0]);
     };
 
@@ -75,7 +79,7 @@ int main(int argc, char** argv) {
         return 1;
     };
 
-    printf("%s", handleSource(source.value(), minify, nosolve, replace_if_expressions, extra1).c_str());
+    printf("%s", handleSource(source.value(), minify, nosolve, ignore_types, replace_if_expressions, extra1).c_str());
 
     return 0;
 }

@@ -38,7 +38,7 @@
 // };
 
 
-std::string handleSource(std::string source, bool minify, bool nosolve, bool replace_if_expressions, bool extra1) {
+std::string handleSource(std::string source, bool minify, bool nosolve, bool ignore_types, bool replace_if_expressions, bool extra1) {
     Luau::Allocator allocator;
     Luau::AstNameTable names(allocator);
 
@@ -78,7 +78,7 @@ std::string handleSource(std::string source, bool minify, bool nosolve, bool rep
             preface += '\n';
         }
 
-        return preface.append(beautifyRoot(root, nosolve, replace_if_expressions, extra1));
+        return preface.append(beautifyRoot(root, nosolve, ignore_types, replace_if_expressions, extra1));
     };
 };
 
