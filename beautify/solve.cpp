@@ -16,11 +16,25 @@ void setAllocator(Luau::Allocator* allocator_in) {
 }
 
 bool nosolve;
+bool s_ignore_types;
 
 AstExpr* getRootExpr(AstExpr* expr) {
-    AstExprGroup* expr_group;
-    while ((expr_group = expr->as<AstExprGroup>()))
-        expr = expr_group->expr;
+    if (s_ignore_types) {
+        while (true) {
+            if (auto expr_group = expr->as<AstExprGroup>()) {
+                expr = expr_group->expr;
+                continue;
+            } else if (auto expr_type_assertion = expr->as<AstExprTypeAssertion>()) {
+                expr = expr_type_assertion->expr;
+                continue;
+            }
+            break;
+        }
+    } else {
+        AstExprGroup* expr_group;
+        while ((expr_group = expr->as<AstExprGroup>()))
+            expr = expr_group->expr;
+    }
 
     return expr;
 };
@@ -516,8 +530,9 @@ Solved solve(AstExpr* expr) {
     return result;
 };
 
-void setNoSolve(bool nosolve_in) {
+void setupSolve(bool nosolve_in, bool ignore_types_in) {
     nosolve = nosolve_in;
+    s_ignore_types = ignore_types_in;
 };
 
 std::string convertNumber(double value) {

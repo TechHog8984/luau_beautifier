@@ -308,7 +308,7 @@ std::string minify(Luau::AstNode* node) {
     return result;
 };
 
-std::string minifyRoot(Luau::AstStatBlock* root, bool nosolve) {
-    setNoSolve(nosolve);
+std::string minifyRoot(Luau::AstStatBlock* root, bool nosolve, bool ignore_types) {
+    setupSolve(nosolve, ignore_types);
     return minify(root);
 };

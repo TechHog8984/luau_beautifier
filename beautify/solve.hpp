@@ -34,7 +34,7 @@ switch (solved.type) { \
 
 bool isSolvable(AstExpr* expr);
 Solved solve(AstExpr* expr);
-void setNoSolve(bool nosolve);
+void setupSolve(bool nosolve, bool ignore_types);
 
 void setAllocator(Luau::Allocator* allocator);
 

@@ -158,7 +158,7 @@ void dontAppendDo() {
     b_dont_append_do = true;
 };
 
-bool ignore_types;
+bool b_ignore_types;
 bool replace_if_expressions;
 bool extra1;
 
@@ -488,7 +488,7 @@ std::string beautify(AstNode* node) {
             result.append("`");
         } else if (AstExprTypeAssertion* expr_type_assertion = expr->as<AstExprTypeAssertion>()) {
             result.append(beautify(expr_type_assertion->expr));
-            if (!ignore_types)
+            if (!b_ignore_types)
                 result.append("::").append(beautify(expr_type_assertion->annotation));
         } else {
             result.append("--[[ error: unknown expression type ").append(std::to_string(expr->classIndex)).append("! ]]");
@@ -869,9 +869,9 @@ std::string beautifyRoot(AstStatBlock* root, bool nosolve_in, bool ignore_types_
     b_dont_append_end = false;
     b_inside_group = false;
 
-    ignore_types = ignore_types_in;
+    b_ignore_types = ignore_types_in;
     replace_if_expressions = replace_if_expressions_in;
     extra1 = extra1_in;
-    setNoSolve(nosolve_in);
+    setupSolve(nosolve_in, ignore_types_in);
     return beautify(root);
 };

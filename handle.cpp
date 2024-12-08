@@ -68,7 +68,7 @@ std::string handleSource(std::string source, bool minify, bool nosolve, bool ign
     setAllocator(&allocator);
 
     if (minify)
-        return minifyRoot(root, nosolve);
+        return minifyRoot(root, nosolve, ignore_types);
     else {
         std::string preface;
 
