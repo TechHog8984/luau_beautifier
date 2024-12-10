@@ -105,9 +105,11 @@ std::optional<size_t> getListSize(std::vector<AstExpr*> list) {
 
     for (auto value : list) {
         value = getRootExpr(value);
+        if (value->is<AstExprConstantNil>())
+            return std::nullopt;
+
         if (isConstant(value)) {
-            if (!value->is<AstExprConstantNil>())
-                result++;
+            result++;
             continue;
         }
 
