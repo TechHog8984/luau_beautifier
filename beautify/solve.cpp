@@ -120,6 +120,8 @@ std::optional<size_t> getListSize(std::vector<AstExpr*> list) {
                     return std::nullopt;
 
                 auto return_stat = body.data[0]->as<AstStatReturn>();
+                if (!return_stat)
+                    continue;
 
                 std::vector<AstExpr*> list;
 
