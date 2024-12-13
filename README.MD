@@ -25,6 +25,7 @@ You can use luau_beautifier without compiling with [this replit](https://replit.
 > options:<br>
 > &nbsp;&nbsp;--minify: switches output mode from beautify to minify<br>
 > &nbsp;&nbsp;--nosolve: doesn't solve simple expressions<br>
+> &nbsp;&nbsp;--ignoretypes: omits Luau type expressions, keeping the important parts<br>
 > &nbsp;&nbsp;--replaceifelseexpr: tries to replace if else expressions with statements<br>
 > &nbsp;&nbsp;--extra1: tries to replace certain statements / expression using potentially dangerous methods
 
