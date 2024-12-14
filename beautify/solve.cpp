@@ -211,6 +211,8 @@ std::optional<size_t> getTableSize(AstExprTable* table) {
 
             int boundary = !is_nil + int(base - const_list->data());
             return boundary;
+
+            #undef solveAndCheckNil
         }
     }
 
