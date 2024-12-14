@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <optional>
 #include "solve.hpp"
@@ -100,20 +101,16 @@ double solveBinary(AstExprBinary::Op op, double left, double right) {
     };
 };
 
-std::optional<size_t> getListSize(std::vector<AstExpr*> list) {
-    size_t result = 0;
+std::optional<std::vector<AstExpr*>> getConstantList(std::vector<AstExpr*> list) {
+    size_t list_size = list.size();
+    std::vector<AstExpr*> const_list;
 
-    for (auto value : list) {
-        value = getRootExpr(value);
-        if (value->is<AstExprConstantNil>())
-            return std::nullopt;
+    for (size_t i = 0; i < list_size; i++) {
+        AstExpr* value = list.at(i);
 
-        if (isConstant(value)) {
-            result++;
-            continue;
-        }
-
-        if (auto value_call = value->as<AstExprCall>()) {
+        if (isConstant(value))
+            const_list.push_back(value);
+        else if (auto value_call = value->as<AstExprCall>()) {
             if (auto func = getRootExpr(value_call->func)->as<AstExprFunction>()) {
                 auto body = func->body->body;
                 // we need to ensure that there is only one return
@@ -123,42 +120,53 @@ std::optional<size_t> getListSize(std::vector<AstExpr*> list) {
 
                 auto return_stat = body.data[0]->as<AstStatReturn>();
                 if (!return_stat)
-                    continue;
+                    return std::nullopt;
 
-                std::vector<AstExpr*> list;
+                std::vector<AstExpr*> ret_list;
 
                 bool vararg = func->args.size == 0 && func->vararg;
                 auto return_list = return_stat->list;
                 auto return_count = return_list.size;
-                if (return_count == 0)
-                    continue;
-
-                for (unsigned index = 0; index < return_count; index++)
-                    list.push_back(return_list.data[index]);
-
-                if (auto last = getRootExpr(list.back())->as<AstExprVarargs>()) {
-                    list.pop_back();
-                    for (auto arg : value_call->args)
-                        list.push_back(arg);
+                if (return_count == 0) {
+                    if (allocator) {
+                        const_list.push_back(allocator->alloc<AstExprConstantNil>(Location(Position(0, 0), 0)));
+                        continue;
+                    }
+                    else
+                        return std::nullopt;
                 }
 
-                std::optional<size_t> size = getListSize(list);
-                if (size.has_value()) {
-                    result += size.value();
-                    continue;
-                }
+                if (i + 1 == list_size) {
+                    for (unsigned index = 0; index < return_count; index++)
+                        ret_list.push_back(return_list.data[index]);
+
+                    if (auto last = getRootExpr(ret_list.back())->as<AstExprVarargs>()) {
+                        ret_list.pop_back();
+                        for (auto arg : value_call->args)
+                            ret_list.push_back(arg);
+                    }
+
+                    auto ret_const_list = getConstantList(ret_list);
+                    if (ret_const_list.has_value()) {
+                        const_list.insert(std::end(const_list), std::begin(ret_const_list.value()), std::end(ret_const_list.value()));
+                    } else
+                        return std::nullopt;
+                } else
+                    const_list.push_back(return_list.data[0]);
             }
-        }
-
-        return std::nullopt;
+        } else
+            return std::nullopt;
     }
 
-    return result;
+    return const_list;
 }
 std::optional<size_t> getTableSize(AstExprTable* table) {
     std::vector<AstExpr*> list;
-
     auto items = table->items;
+
+    if (items.size == 0)
+        return 0;
+
     for (unsigned index = 0; index < items.size; index++) {
         auto item = items.data[index];
         if (item.kind != AstExprTable::Item::List)
@@ -167,7 +175,46 @@ std::optional<size_t> getTableSize(AstExprTable* table) {
         list.push_back(item.value);
     }
 
-    return getListSize(list);
+    auto const_list = getConstantList(list);
+    if (!const_list.has_value())
+        return std::nullopt;
+
+    /*
+    ** Try to find a boundary in table `t'. A `boundary' is an integer index
+    ** such that t[i] is non-nil and t[i+1] is nil (and 0 if t[1] is nil).
+    */
+
+    int j = const_list->size();
+
+    if (j > 0) {
+        auto expr = getRootExpr(const_list->at(j - 1));
+        if (!isSolvable(expr))
+            return std::nullopt;
+
+        auto solved_result = solve(expr);
+        if (solved_result.type == Solved::Expression && getRootExpr(solved_result.expression_result)->is<AstExprConstantNil>()) {
+            #define solveAndCheckNil(oldexpr) expr = getRootExpr(oldexpr); \
+                if (!isSolvable(expr)) \
+                    return std::nullopt; \
+                solved_result = solve(expr); \
+                bool is_nil = solved_result.type == Solved::Expression && getRootExpr(solved_result.expression_result)->is<AstExprConstantNil>();
+
+            AstExpr** base = const_list->data();
+            int rest = j;
+            while (int half = rest >> 1) {
+                solveAndCheckNil(base[half])
+                base = is_nil ? base : base + half;
+                rest -= half;
+            }
+
+            solveAndCheckNil(*base);
+
+            int boundary = !is_nil + int(base - const_list->data());
+            return boundary;
+        }
+    }
+
+    return j;
 }
 
 typedef struct {
@@ -315,6 +362,8 @@ SolveResultType getSolveResultType(AstExpr* expr) {
         result = Number;
     else if (getRootExpr(expr)->is<AstExprConstantString>())
         result = String;
+    else if (getRootExpr(expr)->is<AstExprConstantNil>() || getRootExpr(expr)->is<AstExprConstantBool>())
+        result = Unknown;
     // (function(A) return (#A - 9) end)("some string")
     else if (testInlineNumberThroughStringLenFunction(expr))
         result = Number;
@@ -523,6 +572,12 @@ Solved solve(AstExpr* expr) {
                     break;
             };
         };
+    } else if (AstExprConstantNil* expr_nil = expr->as<AstExprConstantNil>()) {
+        result.type = Solved::Type::Expression;
+        result.expression_result = expr_nil;
+    } else if (AstExprConstantBool* expr_bool = expr->as<AstExprConstantBool>()) {
+        result.type = Solved::Type::Expression;
+        result.expression_result = expr_bool;
     } else if (auto constant_wrap = testInlineNumberThroughStringLenFunction(expr)) {
         result.type = Solved::Type::Number;
         result.number_result = solveBinary(constant_wrap->op, constant_wrap->length, constant_wrap->number);
