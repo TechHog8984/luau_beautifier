@@ -75,7 +75,7 @@ end
 
 if not fs.isDir("luau_build") then
     fs.writeDir("luau_build")
-    spawnProcess("cd", {"luau_build")
+    spawnProcess("cd", {"luau_build"})
     log("building luau...")
     spawnProcess("g++", {
         "-std=c++17",
