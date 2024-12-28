@@ -106,6 +106,7 @@ if build_wasm then
     })
 else
     spawnProcess("g++", {
+        "-std=c++17",
         "main.cpp",
         "handle.cpp",
         BEAUTIFIER_SOURCES,
