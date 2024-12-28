@@ -78,6 +78,7 @@ if not fs.isDir("luau_build") then
     spawnProcess("cd luau_build")
     log("building luau...")
     spawnProcess("g++", {
+        "-std=c++17",
         "-c",
         LUAU_SOURCES_BUILD,
         LUAU_INCLUDE_BUILD
@@ -95,6 +96,7 @@ log("building beautifier")
 
 if build_wasm then
     spawnProcess("emcc", {
+        "-std=c++17",
         "-lembind",
         "handle.cpp",
         BEAUTIFIER_SOURCES,
