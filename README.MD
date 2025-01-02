@@ -4,7 +4,7 @@ A beautifier for Luau written in C++
 
 ## Build
 In order to build, you need to have [Lune](https://lune-org.github.io) installed.<br>
-I personally reccomend installing through cargo if you already have rust installed.
+I personally recommend installing through cargo if you already have rust installed.
 
 ## Build
 > ```sh
