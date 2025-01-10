@@ -71,20 +71,16 @@ local function spawnProcess(command: string, option_list: { string | { string }}
         stdio.ewrite(handle.stderr .. '\n')
         process.exit(1)
     end
+    return handle
 end
 
 if not fs.isDir("luau_build") then
     fs.writeDir("luau_build")
-    spawnProcess("cd", {"luau_build"})
     log("building luau...")
-    spawnProcess("g++", {
-        "-std=c++17",
-        "-c",
-        LUAU_SOURCES_BUILD,
-        LUAU_INCLUDE_BUILD
-    })
+    local build_command = "cd luau_build; g++ -std=c++17 -c " .. table.concat(LUAU_SOURCES_BUILD, ' ') .. ' ' .. table.concat(LUAU_INCLUDE_BUILD, ' ')
+    log("build command:", build_command)
+    log(process.spawn("sh", {"-c", build_command}))
     log("luau done building")
-    spawnProcess("cd", {".."})
 end
 
 local LUAU_OUTPUT = {}
