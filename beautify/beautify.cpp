@@ -774,10 +774,16 @@ std::string beautify(AstNode* node) {
             result.append(";");
         } else if (AstStatFunction* stat_function = stat->as<AstStatFunction>()) {
             addIndents;
-            result.append(beautify(stat_function->name));
-            result.append(" = ");
-            result.append(beautify(stat_function->func));
-            result.append(";");
+            if (AstExprIndexName* expr_index_name = stat_function->name->as<AstExprIndexName>(); expr_index_name->op == ':') {
+                result.append("function ");
+                result.append(beautify(expr_index_name));
+                beautifyFunction(stat_function->func);
+            } else {
+                result.append(beautify(stat_function->name));
+                result.append(" = ");
+                result.append(beautify(stat_function->func));
+                result.append(";");
+            }
         } else if (AstStatLocalFunction* stat_local_function = stat->as<AstStatLocalFunction>()) {
             addIndents;
 

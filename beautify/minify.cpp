@@ -291,10 +291,16 @@ std::string minify(Luau::AstNode* node) {
             result.append(minify(stat_compound_assign->value));
             result.append(";");
         } else if (AstStatFunction* stat_function = stat->as<AstStatFunction>()) {
-            result.append(minify(stat_function->name));
-            result.append("=");
-            result.append(minify(stat_function->func));
-            result.append(";");
+            if (AstExprIndexName* expr_index_name = stat_function->name->as<AstExprIndexName>(); expr_index_name->op == ':') {
+                result.append("function ");
+                result.append(minify(expr_index_name));
+                minifyFunction(stat_function->func);
+            } else {
+                result.append(minify(stat_function->name));
+                result.append("=");
+                result.append(minify(stat_function->func));
+                result.append(";");
+            }
         } else if (AstStatLocalFunction* stat_local_function = stat->as<AstStatLocalFunction>()) {
             result.append("local function ");
             result.append(minify(stat_local_function->name));
