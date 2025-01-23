@@ -345,6 +345,7 @@ bool attemptStatementExtraction(AstStatBlock* block) {
     return false;
 }
 
+bool from_stat_expr = false;
 std::string beautify(AstNode* node) {
     std::string result = "";
 
@@ -388,7 +389,7 @@ std::string beautify(AstNode* node) {
         } else if (AstExprVarargs* expr_varargs = expr->as<AstExprVarargs>()) {
             result = "...";
         } else if (AstExprCall* expr_call = expr->as<AstExprCall>()) {
-            if (isSolvable(expr_call)) {
+            if (isSolvable(expr_call, from_stat_expr)) {
                 appendSolve(expr_call, beautify);
             } else {
                 result = beautify(expr_call->func);
@@ -493,6 +494,7 @@ std::string beautify(AstNode* node) {
         } else {
             result.append("--[[ error: unknown expression type ").append(std::to_string(expr->classIndex)).append("! ]]");
         };
+        from_stat_expr = false;
     } else if (AstStat* stat = node->asStat()) {
         Injection injection = inject_callback ? inject_callback(stat, b_is_root, inject_callback_data) : INJECTION_NONE;
         bool skip = skip_count == 0 || injection.skip;
@@ -656,6 +658,7 @@ std::string beautify(AstNode* node) {
             result.append(";");
         } else if (AstStatExpr* stat_expr = stat->as<AstStatExpr>()) {
             addIndents;
+            from_stat_expr = true;
             result.append(beautify(stat_expr->expr));
             result.append(";");
         } else if (AstStatLocal* stat_local = stat->as<AstStatLocal>()) {

@@ -225,7 +225,10 @@ typedef struct {
     double number;
 } InlineNumberThroughStringLenFunctionResult;
 
-std::optional<InlineNumberThroughStringLenFunctionResult> testInlineNumberThroughStringLenFunction(AstExpr* expr) {
+std::optional<InlineNumberThroughStringLenFunctionResult> testInlineNumberThroughStringLenFunction(AstExpr* expr, bool from_stat_expr = false) {
+    if (from_stat_expr)
+        return std::nullopt;
+
     auto expr_call = getRootExpr(expr)->as<AstExprCall>();
     if (!expr_call || expr_call->args.size != 1)
         return std::nullopt;
@@ -273,7 +276,10 @@ std::optional<InlineNumberThroughStringLenFunctionResult> testInlineNumberThroug
     return std::nullopt;
 }
 
-std::optional<AstExpr*> testSimpleFunctionCall(AstExpr* expr) {
+std::optional<AstExpr*> testSimpleFunctionCall(AstExpr* expr, bool from_stat_expr = false) {
+    if (from_stat_expr)
+        return std::nullopt;
+
     auto expr_call = getRootExpr(expr)->as<AstExprCall>();
     if (!expr_call)
         return std::nullopt;
@@ -308,7 +314,7 @@ std::optional<AstExpr*> testSimpleFunctionCall(AstExpr* expr) {
     return list.data[0];
 }
 
-SolveResultType getSolveResultType(AstExpr* expr) {
+SolveResultType getSolveResultType(AstExpr* expr, bool from_stat_expr = false) {
     SolveResultType result = None;
     if (nosolve)
         return result;
@@ -367,9 +373,9 @@ SolveResultType getSolveResultType(AstExpr* expr) {
     else if (getRootExpr(expr)->is<AstExprConstantNil>() || getRootExpr(expr)->is<AstExprConstantBool>())
         result = Unknown;
     // (function(A) return (#A - 9) end)("some string")
-    else if (testInlineNumberThroughStringLenFunction(expr))
+    else if (testInlineNumberThroughStringLenFunction(expr, from_stat_expr))
         result = Number;
-    else if (testSimpleFunctionCall(expr))
+    else if (testSimpleFunctionCall(expr, from_stat_expr))
         result = Unknown;
 
     return result;
@@ -399,8 +405,8 @@ bool isConstantTable(AstExpr* expr) {
     return expr->is<AstExprTable>();
 };
 
-bool isSolvable(AstExpr* expr) {
-    return getSolveResultType(expr) != None;
+bool isSolvable(AstExpr* expr, bool from_stat_expr) {
+    return getSolveResultType(expr, from_stat_expr) != None;
 };
 
 bool isFalsey(AstExpr* expr) {
@@ -410,9 +416,9 @@ bool isFalsey(AstExpr* expr) {
     return expr->is<AstExprConstantNil>();
 };
 
-Solved solve(AstExpr* expr) {
+Solved solve(AstExpr* expr, bool from_stat_expr) {
     expr = getRootExpr(expr);
-    assert(isSolvable(expr));
+    assert(isSolvable(expr, from_stat_expr));
 
     Solved result = {};
 
@@ -580,10 +586,10 @@ Solved solve(AstExpr* expr) {
     } else if (AstExprConstantBool* expr_bool = expr->as<AstExprConstantBool>()) {
         result.type = Solved::Type::Expression;
         result.expression_result = expr_bool;
-    } else if (auto constant_wrap = testInlineNumberThroughStringLenFunction(expr)) {
+    } else if (auto constant_wrap = testInlineNumberThroughStringLenFunction(expr, from_stat_expr)) {
         result.type = Solved::Type::Number;
         result.number_result = solveBinary(constant_wrap->op, constant_wrap->length, constant_wrap->number);
-    } else if (auto simple = testSimpleFunctionCall(expr)) {
+    } else if (auto simple = testSimpleFunctionCall(expr, from_stat_expr)) {
         result.type = Solved::Expression;
         result.expression_result = simple.value();
     }

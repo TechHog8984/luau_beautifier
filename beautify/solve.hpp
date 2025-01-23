@@ -32,8 +32,8 @@ switch (solved.type) { \
         break; \
 }
 
-bool isSolvable(AstExpr* expr);
-Solved solve(AstExpr* expr);
+bool isSolvable(AstExpr* expr, bool from_stat_expr = false);
+Solved solve(AstExpr* expr, bool from_stat_expr = false);
 void setupSolve(bool nosolve, bool ignore_types);
 
 void setAllocator(Luau::Allocator* allocator);
