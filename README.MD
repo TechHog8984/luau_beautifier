@@ -2,6 +2,12 @@
 
 A beautifier for Luau written in C++
 
+# IMPORTANT NOTICE
+
+This project is currently being rewritten under a new name, `luau-format`. It is much better (Windows support, less bugs, etx) and has an easier-to-work-with codebase.
+
+Once it is released, you will find a link to it here and this repo will be archived.
+
 ## Build
 In order to build, you need to have [Lune](https://lune-org.github.io) installed.<br>
 I personally recommend installing through cargo if you already have rust installed.
