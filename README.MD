@@ -6,8 +6,6 @@ A beautifier for Luau written in C++
 
 This project has been replaced with [luau-format](https://github.com/TechHog8984/luau-format). It is much better (Windows support, less bugs, etc) and has an easier-to-work-with codebase.
 
-Once it is released, you will find a link to it here and this repo will be archived.
-
 ## Build
 In order to build, you need to have [Lune](https://lune-org.github.io) installed.<br>
 I personally recommend installing through cargo if you already have rust installed.
